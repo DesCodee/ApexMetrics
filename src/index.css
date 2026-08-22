@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+  
+  --color-apex-bg: #050505;
+  --color-apex-surface: #111111;
+  --color-apex-card: #111111;
+  --color-apex-border: #222222;
+  --color-apex-accent: #ccff00; 
+  --color-apex-neon: #ccff00; 
+  --color-apex-neon-dim: #1a2400;
+  --color-apex-text-dim: #888888;
+}
+
+body {
+  background-color: var(--color-apex-bg);
+  color: white;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Hide scrollbars for slick mobile app look */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
