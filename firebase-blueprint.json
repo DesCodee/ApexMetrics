@@ -1,0 +1,72 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "documentId": "uid",
+      "fields": [
+        { "name": "telegramId", "type": "string", "description": "Telegram User ID" },
+        { "name": "username", "type": "string", "description": "Username" },
+        { "name": "weight", "type": "number", "description": "Current body weight" },
+        { "name": "createdAt", "type": "timestamp" },
+        { "name": "updatedAt", "type": "timestamp" }
+      ],
+      "rules": [
+        {
+          "allow": "read, write",
+          "condition": "request.auth != null && request.auth.uid == uid"
+        }
+      ]
+    },
+    {
+      "name": "workoutTemplates",
+      "documentId": "templateId",
+      "fields": [
+        { "name": "userId", "type": "string", "description": "Owner ID or 'system'" },
+        { "name": "name", "type": "string", "description": "Name of the workout" },
+        { "name": "exercises", "type": "array", "description": "List of exercises in the template" },
+        { "name": "createdAt", "type": "timestamp" }
+      ],
+      "rules": [
+        {
+          "allow": "read",
+          "condition": "request.auth != null && (resource.data.userId == 'system' || resource.data.userId == request.auth.uid)"
+        },
+        {
+          "allow": "create",
+          "condition": "request.auth != null && request.resource.data.userId == request.auth.uid"
+        },
+        {
+          "allow": "update, delete",
+          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
+        }
+      ]
+    },
+    {
+      "name": "workoutSessions",
+      "documentId": "sessionId",
+      "fields": [
+        { "name": "userId", "type": "string", "description": "User who performed the session" },
+        { "name": "templateId", "type": "string", "description": "Template used" },
+        { "name": "name", "type": "string" },
+        { "name": "date", "type": "timestamp" },
+        { "name": "completed", "type": "boolean" },
+        { "name": "exercises", "type": "array" },
+        { "name": "totalTonnage", "type": "number" }
+      ],
+      "rules": [
+        {
+          "allow": "read",
+          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
+        },
+        {
+          "allow": "create",
+          "condition": "request.auth != null && request.resource.data.userId == request.auth.uid"
+        },
+        {
+          "allow": "update, delete",
+          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
+        }
+      ]
+    }
+  ]
+}

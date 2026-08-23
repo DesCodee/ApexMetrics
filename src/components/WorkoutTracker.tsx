@@ -1,160 +1,161 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Dumbbell, ChevronRight, Play, CheckCircle2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { Play, Check, X, Timer, ChevronRight, Activity, Zap } from 'lucide-react';
+import { type DbUser } from '../lib/api';
+import { calculateTonnage } from '../lib/formulas';
 import { useTelegram } from '../hooks/useTelegram';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
-interface WorkoutTrackerProps {
-  onComplete: () => void;
-}
-
-const workoutPlan = [
-  { id: '1', name: 'Жим штанги лежа', target: 'Грудь', sets: 4, reps: 8, targetWeight: 80 },
-  { id: '2', name: 'Жим гантелей сидя', target: 'Плечи', sets: 3, reps: 10, targetWeight: 24 },
-  { id: '3', name: 'Разводка в кроссовере', target: 'Грудь', sets: 3, reps: 12, targetWeight: 15 },
-  { id: '4', name: 'Отжимания на брусьях', target: 'Трицепс', sets: 3, reps: 'max', targetWeight: 0 },
+// Mock Template for instant UI
+const mockWorkout = [
+  { id: '1', name: 'Жим штанги лежа', target: 'Грудь', prevSets: [{w: 80, r: 8}, {w: 80, r: 8}, {w: 80, r: 7}], sets: [{ weight: 80, reps: 8, completed: false }, { weight: 80, reps: 8, completed: false }, { weight: 80, reps: 8, completed: false }] },
+  { id: '2', name: 'Приседания', target: 'Ноги', prevSets: [{w: 100, r: 8}, {w: 100, r: 8}], sets: [{ weight: 100, reps: 8, completed: false }, { weight: 100, reps: 8, completed: false }] },
+  { id: '3', name: 'Подтягивания', target: 'Спина', prevSets: [{w: 0, r: 10}], sets: [{ weight: 0, reps: 10, completed: false }, { weight: 0, reps: 10, completed: false }, { weight: 0, reps: 10, completed: false }] },
 ];
 
-export function WorkoutTracker({ onComplete }: WorkoutTrackerProps) {
-  const { showMainButton, hideMainButton, triggerHaptic } = useTelegram();
-  const [activeExercise, setActiveExercise] = useState(0);
-  const [completedSets, setCompletedSets] = useState<Record<string, number[]>>({});
-
-  const exercise = workoutPlan[activeExercise];
-  const totalExercises = workoutPlan.length;
+export function WorkoutTracker({ onComplete, user }: { onComplete: () => void, user: DbUser }) {
+  const { triggerHaptic } = useTelegram();
+  const [exercises, setExercises] = useLocalStorage('apex_active_workout', mockWorkout);
+  const [activeExIdx, setActiveExIdx] = useState(0);
   
-  const isAllCompleted = Object.keys(completedSets).length === totalExercises && 
-    (Object.values(completedSets) as number[][]).every((sets, index) => sets.length === workoutPlan[index].sets);
+  // Timer State
+  const [restTime, setRestTime] = useState(0);
+  const [isResting, setIsResting] = useState(false);
 
   useEffect(() => {
-    if (isAllCompleted) {
-      showMainButton('ЗАВЕРШИТЬ ТРЕНИРОВКУ', () => {
-        triggerHaptic('heavy');
-        onComplete();
-        hideMainButton();
-      });
-    } else {
-      hideMainButton();
+    let interval: NodeJS.Timeout;
+    if (isResting && restTime > 0) {
+      interval = setInterval(() => setRestTime(t => t - 1), 1000);
+    } else if (restTime === 0 && isResting) {
+      setIsResting(false);
+      triggerHaptic('heavy');
+      // In real app, play sound here
     }
-    return () => hideMainButton();
-  }, [isAllCompleted, onComplete, showMainButton, hideMainButton, triggerHaptic]);
+    return () => clearInterval(interval);
+  }, [isResting, restTime]);
 
-  const toggleSet = (exerciseId: string, setIndex: number) => {
-    triggerHaptic('light');
-    setCompletedSets(prev => {
-      const current = prev[exerciseId] || [];
-      if (current.includes(setIndex)) {
-        return { ...prev, [exerciseId]: current.filter(i => i !== setIndex) };
-      } else {
-        return { ...prev, [exerciseId]: [...current, setIndex] };
-      }
-    });
+  const startRest = (seconds: number) => {
+    setRestTime(seconds);
+    setIsResting(true);
+    triggerHaptic('medium');
   };
 
+  const toggleSet = (exIdx: number, setIdx: number) => {
+    const newExs = [...exercises];
+    const set = newExs[exIdx].sets[setIdx];
+    set.completed = !set.completed;
+    setExercises(newExs);
+    
+    if (set.completed) {
+      triggerHaptic('success');
+      if (!isResting) startRest(90);
+    } else {
+      triggerHaptic('light');
+    }
+  };
+
+  const updateSet = (exIdx: number, setIdx: number, field: 'weight' | 'reps', val: string) => {
+    const num = Number(val);
+    if (isNaN(num)) return;
+    const newExs = [...exercises];
+    newExs[exIdx].sets[setIdx][field] = num;
+    setExercises(newExs);
+  };
+
+  // Calculate total session tonnage real-time
+  const totalTonnage = exercises.reduce((acc, ex) => acc + calculateTonnage(ex.sets), 0);
+
+  const activeEx = exercises[activeExIdx];
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-apex-bg pb-24 pt-4">
-      {/* Progress Header */}
-      <div className="px-4 mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[11px] font-mono text-apex-text-dim uppercase tracking-[2px]">ПРОГРЕСС СЕССИИ</span>
-          <span className="text-apex-neon font-mono font-black text-sm">
-            {Object.keys(completedSets).length} / {totalExercises}
-          </span>
+    <div className="flex flex-col h-full bg-[#0D0D0D]">
+      {/* Top Timer Bar if Resting */}
+      {isResting && (
+        <div className="bg-[#CCFF00] text-black font-black p-3 flex items-center justify-between animate-in slide-in-from-top">
+          <div className="flex items-center gap-2"><Timer size={18} /> ОТДЫХ</div>
+          <div className="text-xl">{Math.floor(restTime / 60)}:{(restTime % 60).toString().padStart(2, '0')}</div>
+          <button onClick={() => setIsResting(false)} className="bg-black text-[#CCFF00] px-3 py-1 rounded-full text-xs uppercase">Пропустить</button>
         </div>
-        <div className="flex gap-1 h-2">
-          {workoutPlan.map((ex, idx) => {
-            const isDone = completedSets[ex.id]?.length === ex.sets;
-            const isCurrent = idx === activeExercise;
-            return (
-              <div 
-                key={ex.id} 
-                className={cn(
-                  "flex-1 rounded-sm transition-all duration-300 border border-apex-border/50",
-                  isDone ? "bg-apex-neon border-apex-neon" : isCurrent ? "bg-white border-white" : "bg-apex-surface"
-                )} 
-              />
-            );
-          })}
+      )}
+
+      {/* Header */}
+      <div className="p-4 border-b border-[#262626] bg-[#1A1A1A] flex justify-between items-center sticky top-0 z-10">
+        <div>
+          <h2 className="font-bold text-lg">Тренировка</h2>
+          <div className="text-[#CCFF00] text-xs font-bold uppercase tracking-wider">{totalTonnage} кг Тоннаж</div>
         </div>
+        <button 
+          onClick={onComplete}
+          className="bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider border border-white/10"
+        >
+          Завершить
+        </button>
       </div>
 
-      {/* Exercise Selector */}
-      <div className="px-4 mb-6 flex overflow-x-auto gap-3 snap-x hide-scrollbar">
-        {workoutPlan.map((ex, idx) => (
+      {/* Exercise Selector Horizontal Scroll */}
+      <div className="flex overflow-x-auto gap-2 p-4 border-b border-[#262626] no-scrollbar">
+        {exercises.map((ex, idx) => (
           <button
-            key={ex.id}
-            onClick={() => {
-              triggerHaptic('soft');
-              setActiveExercise(idx);
-            }}
-            className={cn(
-              "snap-start shrink-0 p-3 rounded-xl border transition-colors flex flex-col items-start min-w-[140px]",
-              activeExercise === idx 
-                ? "bg-white text-black border-white" 
-                : "bg-apex-card text-apex-text-dim border-apex-border"
-            )}
+            key={idx}
+            onClick={() => setActiveExIdx(idx)}
+            className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
+              activeExIdx === idx 
+                ? 'bg-[#CCFF00]/10 text-[#CCFF00] border-[#CCFF00]' 
+                : 'bg-[#1A1A1A] text-[#A1A1AA] border-[#262626]'
+            }`}
           >
-            <span className={cn(
-              "text-[10px] font-mono uppercase tracking-wider mb-1",
-              activeExercise === idx ? "text-black/60" : "text-apex-neon"
-            )}>{ex.target}</span>
-            <span className="font-bold text-left line-clamp-1 text-sm uppercase">{ex.name}</span>
+            {ex.name}
           </button>
         ))}
       </div>
 
       {/* Active Exercise Logger */}
-      <div className="px-4 flex-1">
-        <div className="bg-apex-card border border-apex-border rounded-2xl p-5 border-t-4 border-t-apex-neon">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <div className="text-[10px] text-apex-text-dim font-mono uppercase mb-2">Следующий подход</div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none mb-2">{exercise.name}</h2>
-              <p className="text-apex-text-dim font-mono text-xs">{exercise.sets} ПОДХОДА • {exercise.reps} ПОВТОРЕНИЙ</p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-apex-surface flex items-center justify-center border border-apex-border">
-              <Dumbbell size={18} className="text-apex-neon" />
-            </div>
-          </div>
+      <div className="p-4 flex-1 overflow-y-auto pb-24">
+        <h3 className="text-2xl font-black mb-1">{activeEx.name}</h3>
+        <p className="text-[#A1A1AA] text-sm mb-6 flex items-center gap-1"><Activity size={14}/> {activeEx.target}</p>
 
-          <div className="space-y-3">
-            {Array.from({ length: exercise.sets }).map((_, setIdx) => {
-              const isDone = completedSets[exercise.id]?.includes(setIdx);
-              return (
-                <div 
-                  key={setIdx}
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-xl border transition-all duration-200",
-                    isDone 
-                      ? "bg-apex-neon/10 border-apex-neon/30" 
-                      : "bg-apex-surface border-apex-border"
-                  )}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-apex-text-dim font-mono font-bold text-sm w-4">{setIdx + 1}</span>
-                    <div className="flex flex-col">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-white font-mono font-black text-lg leading-none">{exercise.targetWeight}</span>
-                        <span className="text-[10px] text-apex-neon font-mono">КГ</span>
-                      </div>
-                      <span className="text-apex-text-dim text-[10px] uppercase font-bold mt-1">× {exercise.reps} ПОВТ</span>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => toggleSet(exercise.id, setIdx)}
-                    className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center transition-all",
-                      isDone 
-                        ? "bg-apex-neon text-black border-apex-neon" 
-                        : "bg-apex-card border border-apex-border text-apex-text-dim"
-                    )}
-                  >
-                    <Check size={20} strokeWidth={isDone ? 4 : 2} />
-                  </button>
+        {/* Header Row */}
+        <div className="grid grid-cols-[30px_1fr_60px_60px_40px] gap-2 mb-2 text-[10px] font-bold text-[#A1A1AA] uppercase tracking-wider px-2">
+          <div>#</div>
+          <div>Прошлый</div>
+          <div className="text-center">Вес</div>
+          <div className="text-center">Повт</div>
+          <div className="text-center">✓</div>
+        </div>
+
+        {/* Sets */}
+        <div className="flex flex-col gap-2">
+          {activeEx.sets.map((set, sIdx) => {
+            const prev = activeEx.prevSets[sIdx];
+            return (
+              <div key={sIdx} className={`grid grid-cols-[30px_1fr_60px_60px_40px] gap-2 items-center bg-[#1A1A1A] border rounded-xl p-2 transition-colors ${set.completed ? 'border-[#CCFF00]' : 'border-[#262626]'}`}>
+                <div className="font-bold text-[#A1A1AA] text-center">{sIdx + 1}</div>
+                <div className="text-xs text-[#A1A1AA]">
+                  {prev ? `${prev.w}кг x ${prev.r}` : '-'}
                 </div>
-              );
-            })}
-          </div>
+                <input 
+                  type="number" value={set.weight} onChange={(e) => updateSet(activeExIdx, sIdx, 'weight', e.target.value)}
+                  className="bg-black border border-[#262626] rounded-lg w-full text-center py-2 font-bold focus:border-[#CCFF00] outline-none"
+                />
+                <input 
+                  type="number" value={set.reps} onChange={(e) => updateSet(activeExIdx, sIdx, 'reps', e.target.value)}
+                  className="bg-black border border-[#262626] rounded-lg w-full text-center py-2 font-bold focus:border-[#CCFF00] outline-none"
+                />
+                <button 
+                  onClick={() => toggleSet(activeExIdx, sIdx)}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${set.completed ? 'bg-[#CCFF00] text-black' : 'bg-black border border-[#262626] text-[#262626]'}`}
+                >
+                  <Check size={20} strokeWidth={3} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Rest Buttons */}
+        <div className="mt-8 flex gap-2">
+          <button onClick={() => startRest(60)} className="flex-1 bg-[#1A1A1A] border border-[#262626] py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-[#A1A1AA] hover:text-white">60s Отдых</button>
+          <button onClick={() => startRest(90)} className="flex-1 bg-[#1A1A1A] border border-[#262626] py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-[#A1A1AA] hover:text-white">90s Отдых</button>
+          <button onClick={() => startRest(120)} className="flex-1 bg-[#1A1A1A] border border-[#262626] py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-[#A1A1AA] hover:text-white">120s Отдых</button>
         </div>
       </div>
     </div>

@@ -1,116 +1,94 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, YAxis } from 'recharts';
-import { TrendingUp, Scale, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { TrendingUp, Activity, Dumbbell, AlertTriangle } from 'lucide-react';
+import { type DbUser } from '../lib/api';
 
-const tonnageData = [
-  { day: 'Пн', volume: 4200 },
-  { day: 'Вт', volume: 0 },
-  { day: 'Ср', volume: 5100 },
-  { day: 'Чт', volume: 0 },
-  { day: 'Пт', volume: 3800 },
-  { day: 'Сб', volume: 6200 },
-  { day: 'Вс', volume: 0 },
+const mockWeeklyData = [
+  { day: 'Пн', tonnage: 4500 },
+  { day: 'Вт', tonnage: 0 },
+  { day: 'Ср', tonnage: 5200 },
+  { day: 'Чт', tonnage: 0 },
+  { day: 'Пт', tonnage: 4800 },
+  { day: 'Сб', tonnage: 0 },
+  { day: 'Вс', tonnage: 6100 },
 ];
 
-export function Analytics() {
+const mockMuscleData = [
+  { name: 'Грудь', percent: 85 },
+  { name: 'Спина', percent: 92 },
+  { name: 'Ноги', percent: 60 },
+  { name: 'Руки', percent: 75 },
+];
+
+export function Analytics({ user }: { user: DbUser }) {
+  // Simulate logic for progressive overload
+  const isOverloading = true; // "В фазе активной гипертрофии"
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-24 pt-4 px-4 bg-apex-bg">
-      <header className="mb-6">
-        <h1 className="text-2xl font-black tracking-tighter uppercase text-white">APEX <span className="text-apex-neon">МЕТРИКИ</span></h1>
-        <p className="text-[10px] font-mono text-apex-text-dim">СВОДКА ЗА 7 ДНЕЙ</p>
-      </header>
+    <div className="p-4 pt-6 pb-24 flex flex-col gap-6">
+      <div className="flex justify-between items-end">
+        <h1 className="text-2xl font-black uppercase tracking-wider">Метрики</h1>
+        <span className="text-[#A1A1AA] text-xs font-bold uppercase">7 Дней</span>
+      </div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-2 gap-4">
-
-        {/* Total Tonnage */}
-        <div className="bg-apex-card border border-apex-border p-5 rounded-2xl col-span-1 border-t-4 border-t-apex-neon flex flex-col justify-between">
-          <div className="text-[10px] text-apex-text-dim uppercase mb-2">Тоннаж</div>
-          <div className="text-2xl font-black font-sans text-white leading-none mb-2">19.3<span className="text-sm text-apex-neon ml-1">т</span></div>
-          <div className="text-apex-neon text-[10px] font-mono flex items-center gap-1">
-            <TrendingUp size={10} /> +2.4т
-          </div>
+      {/* Progressive Overload Status */}
+      <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isOverloading ? 'bg-[#CCFF00]/10 border-[#CCFF00]/30' : 'bg-[#FF3333]/10 border-[#FF3333]/30'}`}>
+        <div className={`p-2 rounded-full ${isOverloading ? 'bg-[#CCFF00]/20 text-[#CCFF00]' : 'bg-[#FF3333]/20 text-[#FF3333]'}`}>
+          {isOverloading ? <TrendingUp size={24} /> : <AlertTriangle size={24} />}
         </div>
-        
-        {/* Workouts */}
-        <div className="bg-apex-card border border-apex-border p-5 rounded-2xl col-span-1 border-t-4 border-t-white flex flex-col justify-between">
-          <div className="text-[10px] text-apex-text-dim uppercase mb-2">Тренировки</div>
-          <div className="text-2xl font-black font-sans text-white leading-none mb-2">4<span className="text-sm text-apex-text-dim ml-1">/ 5</span></div>
-          <div className="text-white text-[10px] font-mono">
-            ОПТИМАЛЬНО
-          </div>
+        <div>
+          <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Статус перегрузки</h3>
+          <p className={`text-xs ${isOverloading ? 'text-[#CCFF00]' : 'text-[#FF3333]'}`}>
+            {isOverloading ? 'В фазе активной гипертрофии (+12% объема)' : 'Плато. Требуется корректировка весов.'}
+          </p>
         </div>
+      </div>
 
-        {/* Volume Chart */}
-        <div className="bg-apex-card border border-apex-border rounded-2xl p-5 col-span-2">
-          <div className="text-[11px] font-mono text-apex-neon uppercase tracking-[2px] mb-4 flex justify-between items-center">
-            <span>ТОННАЖ ПО ДНЯМ (КГ)</span>
-            <span className="text-xs opacity-50">04</span>
-          </div>
-          
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tonnageData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                <XAxis 
-                  dataKey="day" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'var(--color-apex-text-dim)', fontSize: 10, fontFamily: 'var(--font-mono)' }} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'var(--color-apex-text-dim)', fontSize: 10, fontFamily: 'var(--font-mono)' }}
-                />
-                <Tooltip 
-                  cursor={{ fill: 'var(--color-apex-border)', opacity: 0.4 }}
-                  contentStyle={{ backgroundColor: 'var(--color-apex-card)', borderColor: 'var(--color-apex-border)', borderRadius: '8px', color: '#fff' }}
-                  itemStyle={{ color: 'var(--color-apex-neon)', fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}
-                  labelStyle={{ color: 'var(--color-apex-text-dim)', fontSize: '12px' }}
-                />
-                <Bar 
-                  dataKey="volume" 
-                  fill="#ffffff" 
-                  radius={[4, 4, 0, 0]} 
-                  activeBar={{ fill: 'var(--color-apex-neon)' }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Tonnage Chart */}
+      <div className="bg-[#1A1A1A] border border-[#262626] rounded-2xl p-4">
+        <h3 className="text-sm font-bold text-[#A1A1AA] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Dumbbell size={16} /> Тоннаж за неделю
+        </h3>
+        <div className="h-48 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={mockWeeklyData}>
+              <XAxis dataKey="day" stroke="#A1A1AA" fontSize={10} tickLine={false} axisLine={false} />
+              <Tooltip 
+                cursor={{ fill: '#262626' }}
+                contentStyle={{ backgroundColor: '#0D0D0D', border: '1px solid #262626', borderRadius: '12px', color: '#fff' }}
+                itemStyle={{ color: '#CCFF00', fontWeight: 'bold' }}
+              />
+              <Bar dataKey="tonnage" radius={[4, 4, 0, 0]}>
+                {mockWeeklyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.tonnage > 5000 ? '#CCFF00' : '#404040'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
+      </div>
 
-        {/* Progression */}
-        <div className="bg-apex-card border border-apex-border rounded-2xl p-5 col-span-2">
-          <div className="text-[11px] font-mono text-apex-neon uppercase tracking-[2px] mb-4 flex justify-between items-center">
-            <span>ЛИДЕРЫ ГИПЕРТРОФИИ</span>
-            <span className="text-xs opacity-50">05</span>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-white font-bold uppercase text-sm">Жим штанги лежа</div>
-                <div className="text-apex-text-dim text-[10px] uppercase">Грудь</div>
+      {/* Hypertrophy Index Breakdown */}
+      <div className="bg-[#1A1A1A] border border-[#262626] rounded-2xl p-4">
+        <h3 className="text-sm font-bold text-[#A1A1AA] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Activity size={16} /> Индекс гипертрофии
+        </h3>
+        <div className="flex flex-col gap-4">
+          {mockMuscleData.map((m, idx) => (
+            <div key={idx}>
+              <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                <span>{m.name}</span>
+                <span className={m.percent > 80 ? 'text-[#CCFF00]' : 'text-white'}>{m.percent}%</span>
               </div>
-              <div className="text-right">
-                <div className="font-mono text-apex-neon font-black">80 кг</div>
-                <div className="text-apex-text-dim text-[10px]">+2.5 кг</div>
+              <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full" 
+                  style={{ width: `${m.percent}%`, backgroundColor: m.percent > 80 ? '#CCFF00' : '#404040' }}
+                />
               </div>
             </div>
-            <div className="h-px w-full bg-apex-border" />
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-white font-bold uppercase text-sm">Приседания</div>
-                <div className="text-apex-text-dim text-[10px] uppercase">Квадрицепс</div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-apex-neon font-black">110 кг</div>
-                <div className="text-apex-text-dim text-[10px]">+5.0 кг</div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
-
       </div>
     </div>
   );

@@ -1,73 +1,74 @@
-import React, { useEffect } from 'react';
-import { Crown, Zap, Shield, MessageCircle } from 'lucide-react';
-import { useTelegram } from '../hooks/useTelegram';
+import React from 'react';
+import { Crown, Check, X, Shield, Zap, Video } from 'lucide-react';
+import { type DbUser } from '../lib/api';
 
-export function VipOffer() {
-  const { showMainButton, hideMainButton, triggerHaptic } = useTelegram();
-
-  useEffect(() => {
-    showMainButton('КУПИТЬ VIP ЗА 990₽', () => {
-      triggerHaptic('heavy');
-      window.Telegram?.WebApp?.showAlert('Инициализация оплаты через Telegram Stars / ЮKassa...');
-    });
-
-    return () => hideMainButton();
-  }, [showMainButton, hideMainButton, triggerHaptic]);
-
+export function VipOffer({ user }: { user: DbUser }) {
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-24 px-4 pt-4 bg-apex-bg">
-      <header className="mb-6">
-        <h1 className="text-2xl font-black tracking-tighter uppercase text-white">APEX <span className="text-apex-neon">VIP</span></h1>
-        <p className="text-[10px] font-mono text-apex-text-dim">СИСТЕМНЫЙ АПГРЕЙД</p>
-      </header>
+    <div className="p-4 pt-6 pb-24 flex flex-col gap-6">
+      <div className="text-center mt-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#CCFF00]/10 text-[#CCFF00] mb-4 border border-[#CCFF00]/20 shadow-[0_0_30px_rgba(204,255,0,0.15)]">
+          <Crown size={32} />
+        </div>
+        <h1 className="text-3xl font-black uppercase tracking-wider mb-2">APEX <span className="text-[#CCFF00]">VIP</span></h1>
+        <p className="text-[#A1A1AA] text-sm px-4">Разблокируй полный потенциал гипертрофии и персональный AI-трекинг.</p>
+      </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {/* Main Hero Card */}
-        <div className="bg-apex-neon text-black rounded-2xl p-6 relative overflow-hidden flex flex-col items-center text-center">
-          <div className="absolute top-2 right-4 text-[10px] font-mono opacity-50 uppercase tracking-[2px]">ПРО</div>
-          <div className="w-16 h-16 rounded-full bg-black flex items-center justify-center mb-4 mt-2">
-            <Crown size={32} className="text-apex-neon" />
+      {/* Feature Teasers */}
+      <div className="grid gap-3">
+        <div className="bg-[#1A1A1A] border border-[#262626] p-4 rounded-2xl flex gap-4 items-center">
+          <div className="text-[#CCFF00]"><Video size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">AI Форм-Чек</h4>
+            <p className="text-xs text-[#A1A1AA] mt-1">Анализ техники упражнений через нейросеть.</p>
           </div>
-          
-          <h2 className="text-2xl font-black leading-tight uppercase mb-2 tracking-tighter">Взломай свой генетический предел</h2>
-          <p className="text-sm font-bold leading-tight opacity-80">
-            ИИ-анализ, индивидуальный план и личное сопровождение.
-          </p>
         </div>
-
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 gap-3">
-          <FeatureCard 
-            icon={<Zap size={20} className="text-black" />}
-            title="Индивидуальная программа"
-            desc="Адаптивный план под силовые показатели"
-          />
-          <FeatureCard 
-            icon={<MessageCircle size={20} className="text-black" />}
-            title="Закрытый чат"
-            desc="Доступ к комьюнити с тренером"
-          />
-          <FeatureCard 
-            icon={<Shield size={20} className="text-black" />}
-            title="ИИ Разбор Техники"
-            desc="Корректировка техники нейросетью"
-          />
+        <div className="bg-[#1A1A1A] border border-[#262626] p-4 rounded-2xl flex gap-4 items-center">
+          <div className="text-[#CCFF00]"><Zap size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">Макро Калькулятор</h4>
+            <p className="text-xs text-[#A1A1AA] mt-1">Ежедневная корректировка профицита (TDEE).</p>
+          </div>
+        </div>
+        <div className="bg-[#1A1A1A] border border-[#262626] p-4 rounded-2xl flex gap-4 items-center">
+          <div className="text-[#CCFF00]"><Shield size={24} /></div>
+          <div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">1-on-1 Менторство</h4>
+            <p className="text-xs text-[#A1A1AA] mt-1">Прямая связь с профи-тренером.</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
-  return (
-    <div className="bg-apex-card border border-apex-border rounded-xl p-4 flex gap-4 text-left items-center">
-      <div className="w-10 h-10 shrink-0 rounded-lg bg-apex-neon flex items-center justify-center">
-        {icon}
+      {/* Comparison Table */}
+      <div className="bg-[#1A1A1A] border border-[#262626] rounded-2xl overflow-hidden mt-2">
+        <div className="grid grid-cols-[1fr_60px_60px] text-xs font-bold uppercase tracking-wider border-b border-[#262626] bg-black/50">
+          <div className="p-3 pl-4">Функция</div>
+          <div className="p-3 text-center text-[#A1A1AA]">FREE</div>
+          <div className="p-3 text-center text-[#CCFF00] bg-[#CCFF00]/5">VIP</div>
+        </div>
+        
+        {[
+          { name: 'Трекинг Тоннажа', free: true, vip: true },
+          { name: 'CNS Readiness', free: true, vip: true },
+          { name: 'AI Макросы', free: false, vip: true },
+          { name: 'Анализ Техники', free: false, vip: true },
+          { name: 'Чат с Тренером', free: false, vip: true },
+        ].map((feat, i) => (
+          <div key={i} className="grid grid-cols-[1fr_60px_60px] text-sm border-b border-[#262626] last:border-0 items-center">
+            <div className="p-3 pl-4 text-[#A1A1AA]">{feat.name}</div>
+            <div className="p-3 flex justify-center text-[#262626]">
+              {feat.free ? <Check size={16} className="text-white" /> : <X size={16} />}
+            </div>
+            <div className="p-3 flex justify-center bg-[#CCFF00]/5">
+              {feat.vip ? <Check size={16} className="text-[#CCFF00]" /> : <X size={16} />}
+            </div>
+          </div>
+        ))}
       </div>
-      <div>
-        <h3 className="font-bold text-white text-sm uppercase mb-1">{title}</h3>
-        <p className="text-xs text-apex-text-dim font-mono">{desc}</p>
-      </div>
+
+      <button className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-widest text-lg rounded-2xl py-5 mt-4 shadow-[0_0_20px_rgba(204,255,0,0.2)] active:scale-95 transition-transform">
+        Разблокировать за $4.99
+      </button>
+      <p className="text-center text-[10px] text-[#A1A1AA] uppercase tracking-wider">Оплата через Telegram Stars</p>
     </div>
   );
 }

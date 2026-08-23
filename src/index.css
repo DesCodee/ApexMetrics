@@ -4,14 +4,13 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
   
-  --color-apex-bg: #050505;
-  --color-apex-surface: #111111;
-  --color-apex-card: #111111;
-  --color-apex-border: #222222;
-  --color-apex-accent: #ccff00; 
-  --color-apex-neon: #ccff00; 
+  --color-apex-bg: #0D0D0D;
+  --color-apex-card: #1A1A1A;
+  --color-apex-border: #262626;
+  --color-apex-neon: #CCFF00; 
   --color-apex-neon-dim: #1a2400;
-  --color-apex-text-dim: #888888;
+  --color-apex-red: #FF3333;
+  --color-apex-slate: #A1A1AA;
 }
 
 body {
@@ -22,10 +21,10 @@ body {
   user-select: none;
 }
 
-/* Hide scrollbars for slick mobile app look */
 ::-webkit-scrollbar {
   display: none;
 }
+
 * {
   -ms-overflow-style: none;
   scrollbar-width: none;
