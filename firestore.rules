@@ -8,7 +8,6 @@ service cloud.firestore {
     }
 
     // 3. Primitive Definition
-    function isSignedIn() { return request.auth != null; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -57,45 +56,33 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() 
-        && request.auth.uid == userId 
-        && isValidId(userId)
+      allow get, delete: if true;
+      allow create: if isValidId(userId)
         && isValidUserProfile(incoming()) 
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
-      allow update: if isSignedIn() 
-        && request.auth.uid == userId 
-        && isValidUserProfile(incoming())
+      allow update: if isValidUserProfile(incoming())
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState', 'updatedAt']);
       
       match /workouts/{workoutId} {
-        allow list, get: if isSignedIn() && request.auth.uid == userId;
-        allow create: if isSignedIn()
-          && request.auth.uid == userId
-          && isValidId(workoutId)
+        allow list, get, delete: if true;
+        allow create: if isValidId(workoutId)
           && isValidWorkoutLog(incoming(), userId)
           && incoming().createdAt == request.time
           && incoming().updatedAt == request.time;
-        allow update: if isSignedIn()
-          && request.auth.uid == userId
-          && isValidWorkoutLog(incoming(), userId)
+        allow update: if isValidWorkoutLog(incoming(), userId)
           && incoming().createdAt == existing().createdAt
           && incoming().updatedAt == request.time
           && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'day', 'duration', 'status', 'exercises', 'updatedAt']);
-        allow delete: if isSignedIn() && request.auth.uid == userId;
       }
       
       match /cnsLogs/{logId} {
-        allow list, get: if isSignedIn() && request.auth.uid == userId;
-        allow create: if isSignedIn()
-          && request.auth.uid == userId
-          && isValidId(logId)
+        allow list, get, delete: if true;
+        allow create: if isValidId(logId)
           && isValidCnsLog(incoming(), userId)
           && incoming().createdAt == request.time;
-        allow delete: if isSignedIn() && request.auth.uid == userId;
       }
     }
   }

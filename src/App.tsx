@@ -17,7 +17,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [tgUser, setTgUser] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // 1. Initialize Telegram WebApp
@@ -41,14 +40,6 @@ export default function App() {
         setUser(profile);
       }
       setLoadingAuth(false);
-    }).catch((e) => {
-      console.error('Firebase Auth Error:', e);
-      if (e.code === 'auth/admin-restricted-operation') {
-        setAuthError('В Firebase отключена анонимная авторизация. Пожалуйста, включите её в консоли Firebase (Authentication -> Sign-in method -> Anonymous).');
-      } else {
-        setAuthError(e.message);
-      }
-      setLoadingAuth(false);
     });
   }, []);
 
@@ -61,16 +52,6 @@ export default function App() {
       setUser(null);
     }
   };
-
-  if (authError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 text-center">
-        <div className="text-red-500 mb-4 text-4xl">⚠️</div>
-        <h2 className="text-xl font-bold mb-2">Ошибка базы данных</h2>
-        <p className="text-neutral-400 text-sm max-w-sm">{authError}</p>
-      </div>
-    );
-  }
 
   if (loadingAuth) {
     return (

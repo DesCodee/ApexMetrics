@@ -1,28 +1,27 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { UserProfile } from './appEngine';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth();
 
-// Sign in anonymously and ensure UID exists
+// Custom auth object to satisfy existing codebase dependencies
+export const auth = {
+    currentUser: null as { uid: string } | null
+};
+
+// Initialize user using Telegram ID (Bypassing Firebase Auth entirely)
 export const initFirebaseUser = async () => {
-    return new Promise((resolve, reject) => {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                resolve(user);
-            } else {
-                try {
-                    const result = await signInWithPopup(auth, new GoogleAuthProvider());
-                    resolve(result.user);
-                } catch (e) {
-                    reject(e);
-                }
-            }
-        });
+    return new Promise((resolve) => {
+        const tg = (window as any).Telegram?.WebApp;
+        const tgUser = tg?.initDataUnsafe?.user;
+        
+        // Use Telegram ID if available, otherwise a fallback ID for local testing
+        const uid = tgUser?.id ? String(tgUser.id) : 'dev_athlete_123';
+        
+        auth.currentUser = { uid };
+        resolve(auth.currentUser);
     });
 };
 
