@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog } from '../appEngine';
 import { loadWorkoutLogs, auth } from '../firebase';
-import { ChevronRight, Droplet, Moon, Brain, ChevronUp } from 'lucide-react';
+import { ChevronRight, Droplet, Moon, Brain, ChevronUp, Crown } from 'lucide-react';
 
 export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any }) {
   const macros = ApexEngine.calculateTDEE(user.weight, user.height, user.age, user.gender, user.activityLevel, user.goal);

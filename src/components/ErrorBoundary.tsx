@@ -1,16 +1,25 @@
-import React from 'react';
+import React, { Component, ReactNode } from 'react';
 
-export class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: React.ReactNode}) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+interface Props {
+  children?: ReactNode;
+}
 
-  static getDerivedStateFromError(error: Error) {
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
@@ -23,6 +32,7 @@ export class ErrorBoundary extends React.Component<{children: React.ReactNode}, 
         </div>
       );
     }
+    // @ts-ignore
     return this.props.children;
   }
 }
