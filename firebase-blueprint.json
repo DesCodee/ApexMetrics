@@ -1,72 +1,72 @@
 {
-  "collections": [
-    {
-      "name": "users",
-      "documentId": "uid",
-      "fields": [
-        { "name": "telegramId", "type": "string", "description": "Telegram User ID" },
-        { "name": "username", "type": "string", "description": "Username" },
-        { "name": "weight", "type": "number", "description": "Current body weight" },
-        { "name": "createdAt", "type": "timestamp" },
-        { "name": "updatedAt", "type": "timestamp" }
-      ],
-      "rules": [
-        {
-          "allow": "read, write",
-          "condition": "request.auth != null && request.auth.uid == uid"
-        }
-      ]
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing physical parameters and goals",
+      "type": "object",
+      "properties": {
+        "weight": { "type": "number", "description": "Weight in kg" },
+        "height": { "type": "number", "description": "Height in cm" },
+        "age": { "type": "number", "description": "Age in years" },
+        "gender": { "type": "string", "enum": ["M", "F"] },
+        "activityLevel": { "type": "string", "enum": ["sedentary", "light", "moderate", "active", "very_active"] },
+        "goal": { "type": "string", "enum": ["cut", "maintain", "bulk"] },
+        "accessState": { "type": "string", "enum": ["free", "beta-vip"] },
+        "createdAt": { "type": "timestamp", "description": "Creation time" },
+        "updatedAt": { "type": "timestamp", "description": "Last update time" }
+      },
+      "required": ["weight", "height", "age", "gender", "activityLevel", "goal", "accessState", "createdAt", "updatedAt"]
     },
-    {
-      "name": "workoutTemplates",
-      "documentId": "templateId",
-      "fields": [
-        { "name": "userId", "type": "string", "description": "Owner ID or 'system'" },
-        { "name": "name", "type": "string", "description": "Name of the workout" },
-        { "name": "exercises", "type": "array", "description": "List of exercises in the template" },
-        { "name": "createdAt", "type": "timestamp" }
-      ],
-      "rules": [
-        {
-          "allow": "read",
-          "condition": "request.auth != null && (resource.data.userId == 'system' || resource.data.userId == request.auth.uid)"
+    "WorkoutLog": {
+      "title": "WorkoutLog",
+      "description": "A single workout session plan or log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 100 },
+        "day": { "type": "string", "maxLength": 50 },
+        "duration": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["completed", "next", "locked"] },
+        "exercises": { 
+          "type": "array",
+          "description": "List of exercises in this workout",
+          "items": { "type": "object" },
+          "maxLength": 50
         },
-        {
-          "allow": "create",
-          "condition": "request.auth != null && request.resource.data.userId == request.auth.uid"
-        },
-        {
-          "allow": "update, delete",
-          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
-        }
-      ]
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["userId", "title", "day", "duration", "status", "exercises", "createdAt", "updatedAt"]
     },
-    {
-      "name": "workoutSessions",
-      "documentId": "sessionId",
-      "fields": [
-        { "name": "userId", "type": "string", "description": "User who performed the session" },
-        { "name": "templateId", "type": "string", "description": "Template used" },
-        { "name": "name", "type": "string" },
-        { "name": "date", "type": "timestamp" },
-        { "name": "completed", "type": "boolean" },
-        { "name": "exercises", "type": "array" },
-        { "name": "totalTonnage", "type": "number" }
-      ],
-      "rules": [
-        {
-          "allow": "read",
-          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
-        },
-        {
-          "allow": "create",
-          "condition": "request.auth != null && request.resource.data.userId == request.auth.uid"
-        },
-        {
-          "allow": "update, delete",
-          "condition": "request.auth != null && resource.data.userId == request.auth.uid"
-        }
-      ]
+    "CnsLog": {
+      "title": "CnsLog",
+      "description": "Daily CNS readiness tracking log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sleep": { "type": "number" },
+        "soreness": { "type": "number" },
+        "stress": { "type": "number" },
+        "hrDeviation": { "type": "number" },
+        "score": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["userId", "sleep", "soreness", "stress", "hrDeviation", "score", "status", "createdAt"]
     }
-  ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile data"
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": { "$ref": "#/entities/WorkoutLog" },
+      "description": "User's generated workout plans and logs"
+    },
+    "/users/{userId}/cnsLogs/{logId}": {
+      "schema": { "$ref": "#/entities/CnsLog" },
+      "description": "User's daily CNS logs"
+    }
+  }
 }

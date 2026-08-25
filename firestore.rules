@@ -1,21 +1,102 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Внимание: правила открыты для прототипирования, так как нет бэкенда для Telegram Auth
-    match /users/{uid} {
-      allow read, write: if true;
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitive Definition
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 9
+        && data.weight is number
+        && data.height is number
+        && data.age is number
+        && data.gender is string && (data.gender == 'M' || data.gender == 'F')
+        && data.activityLevel is string && data.activityLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active']
+        && data.goal is string && data.goal in ['cut', 'maintain', 'bulk']
+        && data.accessState is string && data.accessState in ['free', 'beta-vip']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint for WorkoutLog
+    function isValidWorkoutLog(data, userId) {
+      return data.keys().hasAll(['userId', 'title', 'day', 'duration', 'status', 'exercises', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 8
+        && data.userId is string && data.userId == userId
+        && data.title is string && data.title.size() <= 100
+        && data.day is string && data.day.size() <= 50
+        && data.duration is string && data.duration.size() <= 50
+        && data.status is string && data.status in ['completed', 'next', 'locked']
+        && data.exercises is list && data.exercises.size() <= 50
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
     }
     
-    match /workoutTemplates/{templateId} {
-      allow read, write: if true;
+    // Validation Blueprint for CnsLog
+    function isValidCnsLog(data, userId) {
+      return data.keys().hasAll(['userId', 'sleep', 'soreness', 'stress', 'hrDeviation', 'score', 'status', 'createdAt'])
+        && data.keys().size() == 8
+        && data.userId is string && data.userId == userId
+        && data.sleep is number
+        && data.soreness is number
+        && data.stress is number
+        && data.hrDeviation is number
+        && data.score is number
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is timestamp;
     }
-    
-    match /workoutSessions/{sessionId} {
-      allow read, write: if true;
-    }
-    
-    match /dailyStats/{statId} {
-      allow read, write: if true;
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidId(userId)
+        && isValidUserProfile(incoming()) 
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState', 'updatedAt']);
+      
+      match /workouts/{workoutId} {
+        allow list, get: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(workoutId)
+          && isValidWorkoutLog(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidWorkoutLog(incoming(), userId)
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'day', 'duration', 'status', 'exercises', 'updatedAt']);
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+      
+      match /cnsLogs/{logId} {
+        allow list, get: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(logId)
+          && isValidCnsLog(incoming(), userId)
+          && incoming().createdAt == request.time;
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
   }
 }

@@ -1,158 +1,66 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// AI Workout Generation Endpoint
+app.post("/api/generateWorkout", async (req, res) => {
+  try {
+    const { profile } = req.body;
+    if (!profile) {
+      return res.status(400).json({ error: "Missing profile" });
     }
+
+    const prompt = `You are an elite athletic coach. 
+Based on this user profile: 
+- Weight: ${profile.weight}kg
+- Height: ${profile.height}cm
+- Age: ${profile.age}
+- Gender: ${profile.gender}
+- Goal: ${profile.goal}
+- Activity: ${profile.activityLevel}
+
+Generate a 3-day workout program.
+Respond ONLY with a valid JSON array of workouts, exactly like this format, nothing else:
+[
+  {
+    "title": "Day 1 - Push",
+    "day": "Day 1",
+    "duration": "45 min",
+    "exercises": [
+      { "name": "Bench Press", "sets": 3, "reps": "8-10" },
+      { "name": "Overhead Press", "sets": 3, "reps": "10-12" }
+    ]
+  },
+  ...
+]`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      contents: prompt,
+      config: {
+          responseMimeType: "application/json"
+      }
+    });
+
+    const resultText = response.text || "[]";
+    const workouts = JSON.parse(resultText);
+    res.json({ workouts });
+  } catch (error) {
+    console.error("AI Generation Error:", error);
+    res.status(500).json({ error: "Failed to generate workout plan." });
   }
 });
 
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
-
-  app.use(express.json());
-
-  // API routes
-  app.post("/api/gemini/generate-workout", async (req, res) => {
-    try {
-      const { goal, experience, weight } = req.body;
-
-      let prompt = `Create a custom workout plan for a user with the following profile:
-Goal: ${goal}
-Experience level: ${experience}
-Weight: ${weight}kg
-
-Generate exactly 3-5 exercises.
-Output MUST be a JSON array of objects with the following schema:
-[
-  {
-    "id": "string (1, 2, 3...)",
-    "name": "string (exercise name in Russian)",
-    "target": "string (target muscle group in Russian)",
-    "defaultSets": number,
-    "defaultReps": number
-  }
-]`;
-
-      const config = {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.STRING },
-                name: { type: Type.STRING },
-                target: { type: Type.STRING },
-                defaultSets: { type: Type.INTEGER },
-                defaultReps: { type: Type.INTEGER }
-              },
-              required: ["id", "name", "target", "defaultSets", "defaultReps"]
-            }
-          }
-        };
-
-      let response;
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config
-        });
-      } catch (err: any) {
-        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
-          console.log("3.7-flash unavailable, falling back to 3.1-flash-lite");
-          response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite',
-            contents: prompt,
-            config
-          });
-        } else {
-          throw err;
-        }
-      }
-
-      if (!response.text) {
-        throw new Error("No response from Gemini");
-      }
-
-      const exercises = JSON.parse(response.text);
-      res.json({ exercises });
-    } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate workout plan" });
-    }
-  });
-
-  app.post("/api/gemini/parse-food", async (req, res) => {
-    try {
-      const { query } = req.body;
-      
-      const prompt = `Parse the following food description and return the total macronutrients and calories.
-User input: "${query}"
-
-Output MUST be a JSON object with the following schema:
-{
-  "cals": number,
-  "protein": number,
-  "carbs": number,
-  "fats": number
-}
-If the user specifies multiple items, sum them up. Estimate to the best of your ability if precise weights aren't given.`;
-
-      const config = {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            cals: { type: Type.INTEGER },
-            protein: { type: Type.INTEGER },
-            carbs: { type: Type.INTEGER },
-            fats: { type: Type.INTEGER }
-          },
-          required: ["cals", "protein", "carbs", "fats"]
-        }
-      };
-
-      let response;
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config
-        });
-      } catch (err: any) {
-        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
-          console.log("3.7-flash unavailable, falling back to 3.1-flash-lite");
-          response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite',
-            contents: prompt,
-            config
-          });
-        } else {
-          throw err;
-        }
-      }
-
-      if (!response.text) {
-        throw new Error("No response from Gemini");
-      }
-
-      const macros = JSON.parse(response.text);
-      res.json(macros);
-    } catch (error: any) {
-      console.error("Gemini parse-food error:", error);
-      res.status(500).json({ error: error.message || "Failed to parse food" });
-    }
-  });
-
-  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -160,10 +68,10 @@ If the user specifies multiple items, sum them up. Estimate to the best of your 
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

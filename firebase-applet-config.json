@@ -1,12 +1,11 @@
 {
-  "projectId": "gen-lang-client-0724668057",
-  "appId": "1:168466832618:web:078555a2d052bbd3cc4b93",
-  "apiKey": "AIzaSyCOjUtQpDAb7ypl4KdzCYOfFwtkpsoJfU8",
-  "authDomain": "gen-lang-client-0724668057.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-apexmetrics-aee775d3-2a13-43aa-af40-0037300032e6",
-  "storageBucket": "gen-lang-client-0724668057.firebasestorage.app",
-  "messagingSenderId": "168466832618",
+  "projectId": "local-fortress-qjf39",
+  "appId": "1:1075392480998:web:61e696be2a6f6d3f3d1d27",
+  "apiKey": "AIzaSyD-pHQXEhJyo7KZLXoJnzbqIs7NsutJW9w",
+  "authDomain": "local-fortress-qjf39.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-apexmetrics-f8ab602d-cd22-4a06-a8ad-4f5aada95daa",
+  "storageBucket": "local-fortress-qjf39.firebasestorage.app",
+  "messagingSenderId": "1075392480998",
   "measurementId": "",
-  "oAuthClientId": "168466832618-2ahosjs72vvvnk881kggrc8bbre8p3so.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }
