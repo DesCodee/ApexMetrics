@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTelegram } from './hooks/useTelegram';
 import { initAuth, type DbUser } from './lib/api';
-import { Home, Dumbbell, BarChart2, Crown, Loader2 } from 'lucide-react';
+import { Home, Dumbbell, BarChart2, Crown, Loader2, ShieldCheck } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Dashboard } from './components/Dashboard';
 import { WorkoutTracker } from './components/WorkoutTracker';
 import { Analytics } from './components/Analytics';
 import { VipOffer } from './components/VipOffer';
 import { Onboarding } from './components/Onboarding';
+import { AdminPanel } from './components/AdminPanel';
 
-export type Tab = 'dashboard' | 'workout' | 'analytics' | 'vip';
+export type Tab = 'dashboard' | 'workout' | 'analytics' | 'vip' | 'admin';
 
 export default function App() {
   const { user, triggerHaptic } = useTelegram();
@@ -18,6 +19,21 @@ export default function App() {
   const [isWorkoutActive, setIsWorkoutActive] = useState(false);
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [secretTaps, setSecretTaps] = useState(0);
+
+  useEffect(() => {
+    if (secretTaps >= 5) {
+      setIsAdminUnlocked(true);
+      triggerHaptic('success');
+      setSecretTaps(0);
+    }
+  }, [secretTaps, triggerHaptic]);
+
+  const handleSecretTap = () => {
+    setSecretTaps(prev => prev + 1);
+    setTimeout(() => setSecretTaps(0), 3000); // Reset after 3 seconds
+  };
 
   useEffect(() => {
     if (user) {
@@ -56,7 +72,7 @@ export default function App() {
   }
 
   if (dbUser && !dbUser.onboardingCompleted) {
-    return <Onboarding uid={dbUser.uid} onComplete={() => setDbUser({ ...dbUser, onboardingCompleted: true })} />;
+    return <Onboarding uid={dbUser.uid} onComplete={(profileData) => setDbUser({ ...dbUser, ...profileData, onboardingCompleted: true })} />;
   }
 
   return (
@@ -91,6 +107,7 @@ export default function App() {
             )}
             {activeTab === 'analytics' && dbUser && <Analytics user={dbUser} />}
             {activeTab === 'vip' && dbUser && <VipOffer user={dbUser} />}
+            {activeTab === 'admin' && isAdminUnlocked && <AdminPanel />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -100,7 +117,7 @@ export default function App() {
           <div className="max-w-md mx-auto flex justify-between items-center px-4 h-full">
             <NavItem 
               icon={<Home size={24} />} label="Apex" 
-              isActive={activeTab === 'dashboard'} onClick={() => handleTabChange('dashboard')} 
+              isActive={activeTab === 'dashboard'} onClick={() => { handleTabChange('dashboard'); handleSecretTap(); }} 
             />
             <NavItem 
               icon={<Dumbbell size={24} />} label="Дневник" 
@@ -114,6 +131,12 @@ export default function App() {
               icon={<Crown size={24} />} label="VIP" 
               isActive={activeTab === 'vip'} onClick={() => handleTabChange('vip')} 
             />
+            {isAdminUnlocked && (
+              <NavItem 
+                icon={<ShieldCheck size={24} />} label="Admin" 
+                isActive={activeTab === 'admin'} onClick={() => handleTabChange('admin')} 
+              />
+            )}
           </div>
         </div>
       )}

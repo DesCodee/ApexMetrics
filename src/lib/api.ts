@@ -1,49 +1,20 @@
 import { doc, setDoc, getDoc, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { db } from './firebase';
 
 export interface DbUser {
   uid: string;
   telegramId: string;
   username: string;
   weight: number;
-  goal?: string;
-  experience?: string;
+  height?: number;
+  age?: number;
+  activityLevel?: number;
+  goal?: 'hard' | 'lean';
   onboardingCompleted?: boolean;
-}
-
-export interface WorkoutTemplate {
-  id: string;
-  userId: string;
-  name: string;
-  exercises: {
-    id: string;
-    name: string;
-    target: string;
-    defaultSets: number;
-    defaultReps: number | 'max';
-  }[];
-}
-
-export interface WorkoutSession {
-  id: string;
-  userId: string;
-  templateId: string;
-  name: string;
-  date: any;
-  completed: boolean;
-  totalTonnage: number;
-  exercises: {
-    id: string;
-    name: string;
-    target: string;
-    sets: { weight: number; reps: number; completed: boolean }[];
-  }[];
+  isVip?: boolean;
 }
 
 export function initAuth(tgUser: any, onUserLoaded: (user: DbUser | null, error?: string) => void) {
-  // Пропускаем Firebase Auth (так как нет доступа к консоли для включения Anonymous)
-  // В качестве uid используем ID из Telegram напрямую.
   const mockAuthAsync = async () => {
     if (!tgUser || !tgUser.id) {
       onUserLoaded(null, "Нет данных пользователя Telegram");
@@ -61,6 +32,7 @@ export function initAuth(tgUser: any, onUserLoaded: (user: DbUser | null, error?
           username: tgUser.username || '',
           weight: 75,
           onboardingCompleted: false,
+          isVip: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
@@ -75,65 +47,116 @@ export function initAuth(tgUser: any, onUserLoaded: (user: DbUser | null, error?
       onUserLoaded(null, err.message);
     }
   };
-
   mockAuthAsync();
-  
-  // Возвращаем пустую функцию отписки, так как больше не слушаем onAuthStateChanged
   return () => {};
 }
 
-export async function getTemplates(uid: string): Promise<WorkoutTemplate[]> {
-  const q = query(collection(db, 'workoutTemplates'), where('userId', 'in', ['system', uid]));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutTemplate));
-}
-
-export async function saveSession(session: Omit<WorkoutSession, 'id'>) {
-  const docRef = await addDoc(collection(db, 'workoutSessions'), session);
-  return docRef.id;
-}
-
-export async function getRecentSessions(uid: string): Promise<WorkoutSession[]> {
-  const q = query(collection(db, 'workoutSessions'), where('userId', '==', uid), orderBy('date', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutSession));
-}
-
-export async function updateWeight(uid: string, newWeight: number) {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, { weight: newWeight, updatedAt: serverTimestamp() });
-}
-
-export async function completeOnboarding(uid: string, profileData: { goal: string; experience: string; weight: number }) {
+export async function completeOnboarding(uid: string, profileData: { weight: number, height: number, age: number, activityLevel: number, goal: 'hard' | 'lean' }) {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, {
-    weight: profileData.weight,
-    goal: profileData.goal,
-    experience: profileData.experience,
+    ...profileData,
     onboardingCompleted: true,
     updatedAt: serverTimestamp()
   });
+}
 
-  // Fetch custom workout plan from Gemini via our backend
-  const res = await fetch("/api/gemini/generate-workout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(profileData)
+export async function upgradeToVip(uid: string) {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    isVip: true,
+    updatedAt: serverTimestamp()
   });
+}
 
-  if (!res.ok) {
-    throw new Error("Failed to generate plan");
-  }
-
-  const data = await res.json();
-  const exercises = data.exercises || [];
-
-  const templateName = `Персональный план (${profileData.goal === 'mass' ? 'Масса' : profileData.goal === 'cut' ? 'Рельеф' : 'Тонус'})`;
-
-  await addDoc(collection(db, 'workoutTemplates'), {
+export async function saveCustomTemplate(uid: string, name: string, exercises: any[]) {
+  const docRef = await addDoc(collection(db, 'workoutTemplates'), {
     userId: uid,
-    name: templateName,
-    createdAt: serverTimestamp(),
-    exercises
+    name,
+    exercises,
+    createdAt: serverTimestamp()
   });
+  return { id: docRef.id, name, exercises };
+}
+
+export async function getUserTemplates(uid: string) {
+  const q = query(collection(db, 'workoutTemplates'), where('userId', '==', uid));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function saveWorkoutSession(uid: string, workout: any[], totalTonnage: number) {
+  const docRef = await addDoc(collection(db, 'workoutSessions'), {
+    userId: uid,
+    exercises: workout,
+    totalTonnage,
+    date: new Date().toISOString(),
+    createdAt: serverTimestamp()
+  });
+  return docRef.id;
+}
+
+export async function getWorkoutHistory(uid: string) {
+  const q = query(
+    collection(db, 'workoutSessions'),
+    where('userId', '==', uid)
+  );
+  const snap = await getDocs(q);
+  const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return docs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+export async function saveDailyStats(uid: string, stats: { cals: number, waterMl: number, protein?: number, carbs?: number, fats?: number }) {
+  const dateStr = new Date().toISOString().split('T')[0];
+  const q = query(collection(db, 'dailyStats'), where('userId', '==', uid), where('date', '==', dateStr));
+  const snap = await getDocs(q);
+  
+  if (snap.empty) {
+    await addDoc(collection(db, 'dailyStats'), {
+      userId: uid,
+      date: dateStr,
+      ...stats,
+      updatedAt: serverTimestamp()
+    });
+  } else {
+    const docRef = doc(db, 'dailyStats', snap.docs[0].id);
+    await updateDoc(docRef, {
+      ...stats,
+      updatedAt: serverTimestamp()
+    });
+  }
+}
+
+export async function getDailyStats(uid: string) {
+  const dateStr = new Date().toISOString().split('T')[0];
+  const q = query(collection(db, 'dailyStats'), where('userId', '==', uid), where('date', '==', dateStr));
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    return snap.docs[0].data();
+  }
+  return null;
+}
+
+export async function getAllUsers() {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+}
+
+export async function toggleUserVipAdmin(uid: string, isVip: boolean) {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, { isVip, updatedAt: serverTimestamp() });
+}
+
+export async function getGlobalStats() {
+  const sessionsSnap = await getDocs(collection(db, 'workoutSessions'));
+  let totalTonnage = 0;
+  let totalWorkouts = sessionsSnap.docs.length;
+  
+  sessionsSnap.forEach(doc => {
+    totalTonnage += (doc.data().totalTonnage || 0);
+  });
+  
+  return {
+    totalTonnage,
+    totalWorkouts
+  };
 }

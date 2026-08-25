@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, Activity, Dumbbell, AlertTriangle, Zap, Loader2 } from 'lucide-react';
 import { type DbUser, getWorkoutHistory } from '../lib/api';
@@ -32,7 +34,6 @@ export function Analytics({ user }: { user: DbUser }) {
   let thisWeekTonnage = 0;
   let lastWeekTonnage = 0;
 
-  // We want the graph left to right: oldest to newest. 
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
@@ -121,7 +122,7 @@ export function Analytics({ user }: { user: DbUser }) {
               <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
                 <div 
                   className="h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${m.percent}%`, backgroundColor: m.percent > 80 ? '#CCFF00' : '#404040' }}
+                  style={{ width: \`\${m.percent}%\`, backgroundColor: m.percent > 80 ? '#CCFF00' : '#404040' }}
                 />
               </div>
             </div>
@@ -130,16 +131,16 @@ export function Analytics({ user }: { user: DbUser }) {
       </div>
 
       {/* Progressive Overload Status */}
-      <div className={`p-4 rounded-2xl border flex items-start gap-3 mt-2 ${isOverloading ? 'bg-[#CCFF00]/10 border-[#CCFF00]/30 shadow-[0_0_20px_rgba(204,255,0,0.05)]' : 'bg-[#FF3333]/10 border-[#FF3333]/30'}`}>
-        <div className={`p-2 rounded-full ${isOverloading ? 'bg-[#CCFF00]/20 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.4)]' : 'bg-[#FF3333]/20 text-[#FF3333]'}`}>
+      <div className={\`p-4 rounded-2xl border flex items-start gap-3 mt-2 \${isOverloading ? 'bg-[#CCFF00]/10 border-[#CCFF00]/30 shadow-[0_0_20px_rgba(204,255,0,0.05)]' : 'bg-[#FF3333]/10 border-[#FF3333]/30'}\`}>
+        <div className={\`p-2 rounded-full \${isOverloading ? 'bg-[#CCFF00]/20 text-[#CCFF00] shadow-[0_0_15px_rgba(204,255,0,0.4)]' : 'bg-[#FF3333]/20 text-[#FF3333]'}\`}>
           {isOverloading ? <TrendingUp size={24} /> : <AlertTriangle size={24} />}
         </div>
         <div>
           <h3 className="font-bold text-sm uppercase tracking-wider mb-1 text-white">Статус перегрузки</h3>
-          <p className={`text-xs font-bold ${isOverloading ? 'text-[#CCFF00]' : 'text-[#FF3333]'}`}>
+          <p className={\`text-xs font-bold \${isOverloading ? 'text-[#CCFF00]' : 'text-[#FF3333]'}\`}>
             {isOverloading 
-              ? `В фазе активной гипертрофии (+${overloadPercent}% объема к прошлой неделе)` 
-              : `Плато (${overloadPercent}% объема). Требуется корректировка весов.`}
+              ? \`В фазе активной гипертрофии (+\${overloadPercent}% объема к прошлой неделе)\` 
+              : \`Плато (\${overloadPercent}% объема). Требуется корректировка весов.\`}
           </p>
         </div>
       </div>
@@ -157,11 +158,11 @@ export function Analytics({ user }: { user: DbUser }) {
                 cursor={{ fill: '#262626' }}
                 contentStyle={{ backgroundColor: '#0D0D0D', border: '1px solid #262626', borderRadius: '12px', color: '#fff', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}
                 itemStyle={{ color: '#CCFF00', fontWeight: 'bold' }}
-                formatter={(value: number) => [`${value} кг`, 'Тоннаж']}
+                formatter={(value: number) => [\`\${value} кг\`, 'Тоннаж']}
               />
               <Bar dataKey="tonnage" radius={[4, 4, 0, 0]}>
                 {weeklyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.tonnage > 0 ? '#CCFF00' : '#333333'} />
+                  <Cell key={\`cell-\${index}\`} fill={entry.tonnage > 0 ? '#CCFF00' : '#333333'} />
                 ))}
               </Bar>
             </BarChart>
@@ -171,3 +172,6 @@ export function Analytics({ user }: { user: DbUser }) {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('src/components/Analytics.tsx', code);

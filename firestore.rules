@@ -13,5 +13,9 @@ service cloud.firestore {
     match /workoutSessions/{sessionId} {
       allow read, write: if true;
     }
+    
+    match /dailyStats/{statId} {
+      allow read, write: if true;
+    }
   }
 }

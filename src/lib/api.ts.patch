@@ -1,0 +1,47 @@
+--- src/lib/api.ts
++++ src/lib/api.ts
+@@ -10,6 +10,7 @@
+   activityLevel?: number;
+   goal?: 'hard' | 'lean';
+   onboardingCompleted?: boolean;
++  isVip?: boolean;
+ }
+ 
+ export function initAuth(tgUser: any, onUserLoaded: (user: DbUser | null, error?: string) => void) {
+@@ -34,7 +35,8 @@
+           weight: 75,
+           onboardingCompleted: false,
++          isVip: false,
+           createdAt: serverTimestamp(),
+           updatedAt: serverTimestamp()
+         };
+         await setDoc(userRef, userData);
+         onUserLoaded({ uid, ...userData } as DbUser);
+@@ -58,3 +60,35 @@
+     updatedAt: serverTimestamp()
+   });
+ }
++
++export async function upgradeToVip(uid: string) {
++  const userRef = doc(db, 'users', uid);
++  await updateDoc(userRef, {
++    isVip: true,
++    updatedAt: serverTimestamp()
++  });
++}
++
++export async function saveCustomTemplate(uid: string, name: string, exercises: any[]) {
++  const docRef = await addDoc(collection(db, 'workoutTemplates'), {
++    userId: uid,
++    name,
++    exercises,
++    createdAt: serverTimestamp()
++  });
++  return { id: docRef.id, name, exercises };
++}
++
++export async function getUserTemplates(uid: string) {
++  const q = query(collection(db, 'workoutTemplates'), where('userId', '==', uid));
++  const snap = await getDocs(q);
++  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
++}
