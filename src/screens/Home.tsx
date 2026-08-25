@@ -31,7 +31,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
   const consumedCalories = 1040;
   const remainingCalories = targetCalories - consumedCalories;
   
-  const calPercent = Math.min(consumedCalories / targetCalories, 1);
+  const calPercent = isNaN(targetCalories) || targetCalories === 0 ? 0 : Math.min(consumedCalories / targetCalories, 1);
   const tonPercent = Math.min(todayTonnage / targetTonnage, 1) || 0.35; // default 35% for visual if 0
 
   return (
@@ -53,7 +53,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
             <span className="text-[#D4FF00] font-bold text-xs">14</span>
           </div>
           <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-neutral-400">
-            {tgUser?.first_name ? tgUser.first_name[0].toUpperCase() : 'A'}
+            {tgUser?.first_name && tgUser.first_name.length > 0 ? tgUser.first_name[0].toUpperCase() : 'A'}
           </div>
         </div>
       </header>

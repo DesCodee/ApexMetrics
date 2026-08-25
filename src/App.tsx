@@ -12,6 +12,8 @@ import Pro from './screens/Pro';
 import BottomNav from './components/BottomNav';
 import { auth, initFirebaseUser, loadUserProfile, saveUserProfile } from './firebase';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('home');
@@ -45,9 +47,14 @@ export default function App() {
 
   const handleCompleteOnboarding = async (data: UserProfile | null) => {
     if (data && auth.currentUser) {
-      await saveUserProfile(data, auth.currentUser.uid);
-      setUser(data);
-      setActiveTab('home');
+      try {
+        await saveUserProfile(data, auth.currentUser.uid);
+        setUser(data);
+        setActiveTab('home');
+      } catch (e: any) {
+        alert("Save Profile Error: " + e.message);
+        console.error(e);
+      }
     } else {
       setUser(null);
     }
@@ -55,27 +62,35 @@ export default function App() {
 
   if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-         <div className="w-8 h-8 border-4 border-[#D4FF00] border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-black flex items-center justify-center">
+           <div className="w-8 h-8 border-4 border-[#D4FF00] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </ErrorBoundary>
     );
   }
 
   // If no user exists, show the interactive onboarding flow
   if (!user) {
-    return <Onboarding onComplete={handleCompleteOnboarding} tgUser={tgUser} />;
+    return (
+      <ErrorBoundary>
+        <Onboarding onComplete={handleCompleteOnboarding} tgUser={tgUser} />
+      </ErrorBoundary>
+    );
   }
 
   // Main App Shell (4 Tabs)
   return (
-    <div className="min-h-screen bg-black text-white font-sans pb-24">
-      {activeTab === 'home' && <Home user={user} tgUser={tgUser} />}
-      {activeTab === 'log' && <Log user={user} />}
-      {activeTab === 'body' && <Body user={user} />}
-      {activeTab === 'pro' && <Pro user={user} onUpdate={handleCompleteOnboarding} />}
-      
-      <BottomNav active={activeTab} onChange={setActiveTab} />
-    </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-black text-white font-sans pb-24">
+        {activeTab === 'home' && <Home user={user} tgUser={tgUser} />}
+        {activeTab === 'log' && <Log user={user} />}
+        {activeTab === 'body' && <Body user={user} />}
+        {activeTab === 'pro' && <Pro user={user} onUpdate={handleCompleteOnboarding} />}
+        
+        <BottomNav active={activeTab} onChange={setActiveTab} />
+      </div>
+    </ErrorBoundary>
   );
 }
 
