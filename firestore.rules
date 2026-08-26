@@ -29,13 +29,15 @@ service cloud.firestore {
 
     // Validation Blueprint for WorkoutLog
     function isValidWorkoutLog(data, userId) {
-      return data.keys().hasAll(['userId', 'title', 'day', 'duration', 'status', 'exercises', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 8
+      return data.keys().hasAll(['id', 'userId', 'title', 'day', 'duration', 'status', 'exercises', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'title', 'day', 'duration', 'status', 'date', 'exercises', 'createdAt', 'updatedAt'])
+        && data.id is string
         && data.userId is string && data.userId == userId
         && data.title is string && data.title.size() <= 100
         && data.day is string && data.day.size() <= 50
         && data.duration is string && data.duration.size() <= 50
         && data.status is string && data.status in ['completed', 'next', 'locked']
+        && (data.keys().hasAll(['date']) ? data.date is string : true)
         && data.exercises is list && data.exercises.size() <= 50
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
@@ -75,7 +77,7 @@ service cloud.firestore {
         allow update: if isValidWorkoutLog(incoming(), userId)
           && incoming().createdAt == existing().createdAt
           && incoming().updatedAt == request.time
-          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'day', 'duration', 'status', 'exercises', 'updatedAt']);
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'day', 'duration', 'status', 'exercises', 'updatedAt', 'date']);
       }
       
       match /cnsLogs/{logId} {

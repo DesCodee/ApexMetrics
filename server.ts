@@ -44,7 +44,7 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.1-pro-preview",
       contents: prompt,
       config: {
           responseMimeType: "application/json"
@@ -55,8 +55,42 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
     const workouts = JSON.parse(resultText);
     res.json({ workouts });
   } catch (error) {
-    console.error("AI Generation Error:", error);
-    res.status(500).json({ error: "Failed to generate workout plan." });
+    // Fallback if API fails (e.g., rate limits, quota exceeded)
+    const fallbackWorkouts = [
+      {
+        "title": "Full Body A",
+        "day": "Day 1",
+        "duration": "45 min",
+        "exercises": [
+          { "name": "Squats", "sets": 3, "reps": "8-10", "rpe": 8 },
+          { "name": "Bench Press", "sets": 3, "reps": "8-10", "rpe": 8 },
+          { "name": "Barbell Rows", "sets": 3, "reps": "8-10", "rpe": 8 }
+        ]
+      },
+      {
+        "title": "Full Body B",
+        "day": "Day 2",
+        "duration": "45 min",
+        "exercises": [
+          { "name": "Deadlifts", "sets": 3, "reps": "5-8", "rpe": 8 },
+          { "name": "Overhead Press", "sets": 3, "reps": "8-10", "rpe": 8 },
+          { "name": "Pull-ups", "sets": 3, "reps": "8-12", "rpe": 8 }
+        ]
+      },
+      {
+        "title": "Hypertrophy / Accessories",
+        "day": "Day 3",
+        "duration": "40 min",
+        "exercises": [
+          { "name": "Leg Press", "sets": 3, "reps": "10-15", "rpe": 8 },
+          { "name": "Incline DB Press", "sets": 3, "reps": "10-12", "rpe": 8 },
+          { "name": "Bicep Curls", "sets": 3, "reps": "12-15", "rpe": 9 }
+        ]
+      }
+    ];
+    
+    console.log("Using fallback workout plan due to API error");
+    res.json({ workouts: fallbackWorkouts });
   }
 });
 
