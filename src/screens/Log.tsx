@@ -56,9 +56,12 @@ export default function Log({ user }: { user: UserProfile }) {
              <Moon size={24} className="text-neutral-400" />
              <span className="text-[10px] font-bold text-neutral-300">Сон</span>
           </div>
-          <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 opacity-50">
-             <Brain size={24} className="text-neutral-500" />
-             <span className="text-[10px] font-bold text-neutral-500">Тест ЦНС 🔒</span>
+          <div 
+             className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
+             onClick={() => { triggerHaptic(); setActiveView('workout'); }}
+          >
+             <Brain size={24} className="text-[#D4FF00]" />
+             <span className="text-[10px] font-bold text-white">ЦНС Check</span>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 opacity-50">
              <Heart size={24} className="text-neutral-500" />
