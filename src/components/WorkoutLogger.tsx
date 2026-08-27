@@ -46,33 +46,39 @@ export default function Workouts({ user }: { user: UserProfile }) {
                data = {
                    workouts: [
                       {
-                        "title": "Full Body A",
-                        "day": "Day 1",
-                        "duration": "45 min",
+                        "title": "Фулбади A",
+                        "day": "День 1",
+                        "duration": "60 мин",
                         "exercises": [
-                          { "name": "Squats", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Bench Press", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Barbell Rows", "sets": 3, "reps": "8-10", "rpe": 8 }
+                          { "name": "Приседания со штангой", "sets": 3, "reps": "8-10", "rpe": 8 },
+                          { "name": "Жим штанги лежа", "sets": 3, "reps": "8-10", "rpe": 8 },
+                          { "name": "Тяга штанги в наклоне", "sets": 3, "reps": "8-10", "rpe": 8 },
+                          { "name": "Выпады с гантелями", "sets": 3, "reps": "10-12", "rpe": 8 },
+                          { "name": "Скручивания на пресс", "sets": 3, "reps": "15-20", "rpe": 8 }
                         ]
                       },
                       {
-                        "title": "Full Body B",
-                        "day": "Day 2",
-                        "duration": "45 min",
+                        "title": "Фулбади B",
+                        "day": "День 2",
+                        "duration": "60 мин",
                         "exercises": [
-                          { "name": "Deadlifts", "sets": 3, "reps": "5-8", "rpe": 8 },
-                          { "name": "Overhead Press", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Pull-ups", "sets": 3, "reps": "8-12", "rpe": 8 }
+                          { "name": "Становая тяга", "sets": 3, "reps": "5-8", "rpe": 8 },
+                          { "name": "Армейский жим", "sets": 3, "reps": "8-10", "rpe": 8 },
+                          { "name": "Подтягивания", "sets": 3, "reps": "8-12", "rpe": 8 },
+                          { "name": "Жим ногами", "sets": 3, "reps": "10-12", "rpe": 8 },
+                          { "name": "Планка", "sets": 3, "reps": "60 сек", "rpe": 8 }
                         ]
                       },
                       {
-                        "title": "Hypertrophy",
-                        "day": "Day 3",
-                        "duration": "40 min",
+                        "title": "Гипертрофия",
+                        "day": "День 3",
+                        "duration": "50 мин",
                         "exercises": [
-                          { "name": "Leg Press", "sets": 3, "reps": "10-15", "rpe": 8 },
-                          { "name": "Incline DB Press", "sets": 3, "reps": "10-12", "rpe": 8 },
-                          { "name": "Bicep Curls", "sets": 3, "reps": "12-15", "rpe": 9 }
+                          { "name": "Жим гантелей под углом", "sets": 3, "reps": "10-12", "rpe": 8 },
+                          { "name": "Тяга верхнего блока", "sets": 3, "reps": "10-12", "rpe": 8 },
+                          { "name": "Разгибания ног", "sets": 3, "reps": "12-15", "rpe": 9 },
+                          { "name": "Сгибания рук со штангой", "sets": 3, "reps": "10-12", "rpe": 9 },
+                          { "name": "Разгибания на трицепс", "sets": 3, "reps": "12-15", "rpe": 9 }
                         ]
                       }
                    ]
@@ -323,21 +329,21 @@ export default function Workouts({ user }: { user: UserProfile }) {
                       placeholder="0"
                       value={set.weight}
                       onChange={(e) => updateSet(i, sIdx, 'weight', e.target.value)}
-                      className="flex-1 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
                       type="number" 
                       placeholder="0"
                       value={set.reps}
                       onChange={(e) => updateSet(i, sIdx, 'reps', e.target.value)}
-                      className="flex-1 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
                       type="number" 
                       placeholder={ex.rpe}
                       value={set.rpe}
                       onChange={(e) => updateSet(i, sIdx, 'rpe', e.target.value)}
-                      className="flex-1 bg-black border border-neutral-800 rounded-xl py-2 text-center text-neutral-400 text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-neutral-400 text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                   </div>
                 ))}

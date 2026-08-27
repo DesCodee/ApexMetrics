@@ -29,15 +29,23 @@ Based on this user profile:
 - Activity: ${profile.activityLevel}
 
 Generate a 3-day workout program.
+IMPORTANT RULES:
+1. Provide 5 to 7 exercises per workout.
+2. ALL text (titles, days, exercise names) MUST be in Russian language.
+
 Respond ONLY with a valid JSON array of workouts, exactly like this format, nothing else:
 [
   {
-    "title": "Day 1 - Push",
-    "day": "Day 1",
-    "duration": "45 min",
+    "title": "День 1 - Фулбади",
+    "day": "День 1",
+    "duration": "60 мин",
     "exercises": [
-      { "name": "Bench Press", "sets": 3, "reps": "8-10" },
-      { "name": "Overhead Press", "sets": 3, "reps": "10-12" }
+      { "name": "Приседания со штангой", "sets": 3, "reps": "8-10", "rpe": 8 },
+      { "name": "Жим лежа", "sets": 3, "reps": "8-10", "rpe": 8 },
+      { "name": "Тяга штанги в наклоне", "sets": 3, "reps": "8-10", "rpe": 8 },
+      { "name": "Жим гантелей сидя", "sets": 3, "reps": "10-12", "rpe": 8 },
+      { "name": "Сгибания рук с гантелями", "sets": 3, "reps": "12-15", "rpe": 9 },
+      { "name": "Скручивания на пресс", "sets": 3, "reps": "15-20", "rpe": 8 }
     ]
   },
   ...

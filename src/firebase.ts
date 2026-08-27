@@ -43,7 +43,14 @@ export const saveUserProfile = async (profile: UserProfile, userId: string) => {
 };
 
 export const deleteUserProfile = async (userId: string) => {
-    const { deleteDoc } = await import('firebase/firestore');
+    const { deleteDoc, getDocs, collection } = await import('firebase/firestore');
+    
+    // Wipe workouts subcollection first
+    const workoutsSnap = await getDocs(collection(db, 'users', userId, 'workouts'));
+    for (const d of workoutsSnap.docs) {
+        await deleteDoc(d.ref);
+    }
+    
     const userRef = doc(db, 'users', userId);
     await deleteDoc(userRef);
 };
