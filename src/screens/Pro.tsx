@@ -10,18 +10,22 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
 
   const handleLogout = async () => {
     triggerHaptic();
-    if (auth.currentUser) {
-        await deleteUserProfile(auth.currentUser.uid);
+    if (window.confirm('Вы уверены, что хотите полностью удалить профиль и начать заново? Все данные будут стерты.')) {
+        if (auth.currentUser) {
+            await deleteUserProfile(auth.currentUser.uid);
+        }
+        onUpdate(null);
     }
-    onUpdate(null);
   };
 
   return (
     <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24">
        
-       <header className="flex justify-end pt-2">
-          <button onClick={handleLogout} className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 hover:text-red-400">
-             <LogOut size={14} />
+       <header className="flex justify-between items-center pt-2">
+          <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Управление</div>
+          <button onClick={handleLogout} className="px-3 py-1.5 rounded-full bg-neutral-900 flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
+             <LogOut size={12} />
+             <span className="text-[10px] font-bold uppercase tracking-widest">Сбросить профиль</span>
           </button>
        </header>
 

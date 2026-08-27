@@ -82,3 +82,18 @@ export const loadUserProfile = async (userId: string): Promise<UserProfile | nul
     }
     return null;
 };
+
+export const saveDailyStats = async (userId: string, dateStr: string, data: any) => {
+    const statsRef = doc(db, 'users', userId, 'daily_stats', dateStr);
+    await setDoc(statsRef, {
+        ...data,
+        updatedAt: serverTimestamp(),
+    }, { merge: true });
+};
+
+export const loadDailyStats = async (userId: string, dateStr: string): Promise<any | null> => {
+    const statsRef = doc(db, 'users', userId, 'daily_stats', dateStr);
+    const snap = await getDoc(statsRef);
+    return snap.exists() ? snap.data() : null;
+};
+

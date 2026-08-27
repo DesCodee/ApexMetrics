@@ -86,6 +86,10 @@ service cloud.firestore {
           && isValidCnsLog(incoming(), userId)
           && incoming().createdAt == request.time;
       }
+      
+      match /daily_stats/{dateId} {
+        allow read, write: if true;
+      }
     }
   }
 }

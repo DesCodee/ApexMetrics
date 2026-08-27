@@ -1,12 +1,63 @@
-import { useState } from 'react';
-import { UserProfile } from '../appEngine';
-import { Apple, Droplet, Dumbbell, Moon, Brain, Heart, Plus, Minus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { UserProfile, ApexEngine } from '../appEngine';
+import { Apple, Droplet, Dumbbell, Moon, Brain, Heart, Plus, Minus, Activity } from 'lucide-react';
 import WorkoutLogger from '../components/WorkoutLogger';
+import { loadDailyStats, saveDailyStats, auth } from '../firebase';
 
 export default function Log({ user }: { user: UserProfile }) {
   const [activeView, setActiveView] = useState<'grid' | 'workout'>('grid');
-  const [waterGlasses, setWaterGlasses] = useState(7);
+  
+  // Hydration
+  const [waterGlasses, setWaterGlasses] = useState(0);
   const maxGlasses = 12; // 3L total (250ml each)
+  
+  // Daily Inputs
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fats, setFats] = useState('');
+  const [steps, setSteps] = useState('');
+  const [isSavingStats, setIsSavingStats] = useState(false);
+
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (auth.currentUser) {
+        const stats = await loadDailyStats(auth.currentUser.uid, dateStr);
+        if (stats) {
+           setWaterGlasses(stats.waterGlasses || 0);
+           setProtein(stats.protein || '');
+           setCarbs(stats.carbs || '');
+           setFats(stats.fats || '');
+           setSteps(stats.steps || '');
+        }
+      }
+    };
+    fetchStats();
+  }, [dateStr]);
+
+  const handleSaveStats = async () => {
+     if (!auth.currentUser) return;
+     triggerHaptic();
+     setIsSavingStats(true);
+     await saveDailyStats(auth.currentUser.uid, dateStr, {
+        waterGlasses,
+        protein: Number(protein) || 0,
+        carbs: Number(carbs) || 0,
+        fats: Number(fats) || 0,
+        steps: Number(steps) || 0
+     });
+     setIsSavingStats(false);
+  };
+
+  // Auto-save water when it changes (debounced by the user mentally, but let's just save immediately for UX or require explicit save. We will just add it to the save block or save water implicitly).
+  // Actually, we'll save water immediately on change
+  const updateWater = async (newVal: number) => {
+     setWaterGlasses(newVal);
+     if (auth.currentUser) {
+        await saveDailyStats(auth.currentUser.uid, dateStr, { waterGlasses: newVal });
+     }
+  };
 
   const triggerHaptic = () => {
     const tg = (window as any).Telegram?.WebApp;
@@ -28,6 +79,10 @@ export default function Log({ user }: { user: UserProfile }) {
         </div>
      );
   }
+
+  const macros = ApexEngine.calculateTDEE(user.weight, user.height, user.age, user.gender, user.activityLevel, user.goal);
+  const currentCalories = (Number(protein) * 4) + (Number(carbs) * 4) + (Number(fats) * 9);
+  const calPercent = Math.min(currentCalories / (macros.calories || 2000), 1) * 100;
 
   return (
     <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24">
@@ -82,7 +137,7 @@ export default function Log({ user }: { user: UserProfile }) {
           <div className="flex items-center justify-between gap-2">
              <button 
                className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center active:scale-95 transition-transform"
-               onClick={() => { triggerHaptic(); setWaterGlasses(Math.max(0, waterGlasses - 1)); }}
+               onClick={() => { triggerHaptic(); updateWater(Math.max(0, waterGlasses - 1)); }}
              >
                 <Minus size={14} />
              </button>
@@ -98,80 +153,76 @@ export default function Log({ user }: { user: UserProfile }) {
              
              <button 
                className="w-8 h-8 rounded-full bg-[#D4FF00] text-black flex items-center justify-center active:scale-95 transition-transform"
-               onClick={() => { triggerHaptic(); setWaterGlasses(Math.min(maxGlasses, waterGlasses + 1)); }}
+               onClick={() => { triggerHaptic(); updateWater(Math.min(maxGlasses, waterGlasses + 1)); }}
              >
                 <Plus size={14} />
              </button>
           </div>
-          <div className="text-[9px] text-neutral-600 mt-3">{waterGlasses} стаканов • 250 мл каждый</div>
        </div>
 
-       {/* Calories Today */}
-       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5">
-          <div className="flex justify-between items-end mb-3">
-             <div className="text-sm font-bold text-white">Калории за сегодня</div>
-             <div className="text-lg font-bold text-[#D4FF00]">1,040 <span className="text-xs text-neutral-500">/ 2,200</span></div>
-          </div>
-          <div className="w-full h-2 bg-black rounded-full overflow-hidden flex mb-3">
-             <div className="h-full bg-[#D4FF00]" style={{ width: '30%' }} />
-             <div className="h-full bg-orange-500" style={{ width: '15%' }} />
-          </div>
-          <div className="flex gap-4 text-[9px] text-neutral-500 font-bold uppercase tracking-widest">
-             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#D4FF00]" /> Белки 80г</span>
-             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-neutral-700" /> Углеводы 131г</span>
-             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> Жиры 17г</span>
-          </div>
-       </div>
-
-       {/* Meals Today */}
-       <div>
-          <div className="flex justify-between items-center mb-3">
-             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Приемы пищи</div>
-             <button className="text-[#D4FF00] text-[10px] font-bold uppercase tracking-widest active:scale-95">+ Добавить</button>
+       {/* Daily Manual Stats Form */}
+       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 space-y-5">
+          <div className="flex justify-between items-center">
+             <div className="text-sm font-bold text-white">Дневные показатели</div>
+             <div className="text-xs font-bold text-[#D4FF00]">{currentCalories} <span className="text-neutral-500">ккал</span></div>
           </div>
           
-          <div className="space-y-2">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                   <div className="text-white font-semibold text-sm">Овсянка + Банан</div>
-                   <div className="text-[10px] text-neutral-500 mt-1 flex gap-2">
-                     <span>09:15</span>
-                     <span><span className="text-neutral-400">Б</span> 12г</span>
-                     <span><span className="text-neutral-400">У</span> 68г</span>
-                     <span><span className="text-neutral-400">Ж</span> 6г</span>
-                   </div>
-                </div>
-                <div className="text-[#D4FF00] font-bold text-sm">380</div>
-            </div>
-            
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                   <div className="text-white font-semibold text-sm">Куриная грудка + Рис</div>
-                   <div className="text-[10px] text-neutral-500 mt-1 flex gap-2">
-                     <span>13:00</span>
-                     <span><span className="text-neutral-400">Б</span> 48г</span>
-                     <span><span className="text-neutral-400">У</span> 55г</span>
-                     <span><span className="text-neutral-400">Ж</span> 8г</span>
-                   </div>
-                </div>
-                <div className="text-[#D4FF00] font-bold text-sm">520</div>
-            </div>
-            
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                   <div className="text-white font-semibold text-sm">Греческий йогурт</div>
-                   <div className="text-[10px] text-neutral-500 mt-1 flex gap-2">
-                     <span>16:30</span>
-                     <span><span className="text-neutral-400">Б</span> 20г</span>
-                     <span><span className="text-neutral-400">У</span> 8г</span>
-                     <span><span className="text-neutral-400">Ж</span> 3г</span>
-                   </div>
-                </div>
-                <div className="text-[#D4FF00] font-bold text-sm">140</div>
-            </div>
+          <div className="w-full h-1.5 bg-black rounded-full overflow-hidden mb-3">
+             <div className="h-full bg-[#D4FF00] transition-all duration-500" style={{ width: `${calPercent}%` }} />
           </div>
-       </div>
 
+          <div className="grid grid-cols-3 gap-3">
+             <div>
+                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Белки (г)</label>
+                <input 
+                  type="number" 
+                  value={protein} 
+                  onChange={(e) => setProtein(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                />
+             </div>
+             <div>
+                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Жиры (г)</label>
+                <input 
+                  type="number" 
+                  value={fats} 
+                  onChange={(e) => setFats(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                />
+             </div>
+             <div>
+                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Углеводы (г)</label>
+                <input 
+                  type="number" 
+                  value={carbs} 
+                  onChange={(e) => setCarbs(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                />
+             </div>
+          </div>
+
+          <div>
+             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block flex items-center gap-1"><Activity size={12}/> Шаги</label>
+             <input 
+               type="number" 
+               value={steps} 
+               onChange={(e) => setSteps(e.target.value)}
+               placeholder="10000"
+               className="w-full bg-black border border-neutral-800 rounded-xl py-3 px-3 text-center text-white text-lg font-bold outline-none focus:border-[#D4FF00]" 
+             />
+          </div>
+
+          <button 
+             onClick={handleSaveStats}
+             disabled={isSavingStats}
+             className="w-full bg-neutral-800 text-white font-bold text-sm py-3 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+          >
+             {isSavingStats ? 'Сохранение...' : 'Сохранить показатели'}
+          </button>
+       </div>
     </div>
   )
 }
