@@ -58,10 +58,6 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
           </h1>
         </div>
         <div className="flex gap-2">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-full px-3 py-1 flex items-center gap-1.5">
-            <span className="text-amber-500 text-xs">🔥</span>
-            <span className="text-[#D4FF00] font-bold text-xs">14</span>
-          </div>
           <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-neutral-400">
             {tgUser?.first_name && tgUser.first_name.length > 0 ? tgUser.first_name[0].toUpperCase() : 'A'}
           </div>

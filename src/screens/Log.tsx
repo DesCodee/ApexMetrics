@@ -90,37 +90,21 @@ export default function Log({ user }: { user: UserProfile }) {
          <h1 className="text-2xl font-serif text-white">Быстрый лог</h1>
        </header>
 
-       {/* Quick Log Grid */}
-       <div className="grid grid-cols-3 gap-3">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform" onClick={triggerHaptic}>
-             <Apple size={24} className="text-neutral-400" />
-             <span className="text-[10px] font-bold text-neutral-300">Еда</span>
-          </div>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform" onClick={triggerHaptic}>
-             <Droplet size={24} className="text-neutral-400" />
-             <span className="text-[10px] font-bold text-neutral-300">Вода</span>
-          </div>
+       {/* Main Actions */}
+       <div className="grid grid-cols-2 gap-3">
           <div 
-             className="bg-neutral-900 border border-[#D4FF00]/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
+             className="bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
              onClick={() => { triggerHaptic(); setActiveView('workout'); }}
           >
-             <Dumbbell size={24} className="text-[#D4FF00]" />
-             <span className="text-[10px] font-bold text-white">Тренировка</span>
-          </div>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform" onClick={triggerHaptic}>
-             <Moon size={24} className="text-neutral-400" />
-             <span className="text-[10px] font-bold text-neutral-300">Сон</span>
+             <Dumbbell size={28} className="text-[#D4FF00]" />
+             <span className="text-xs font-bold text-white uppercase tracking-widest">Тренировка</span>
           </div>
           <div 
-             className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform"
+             className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-neutral-700"
              onClick={() => { triggerHaptic(); setActiveView('workout'); }}
           >
-             <Brain size={24} className="text-[#D4FF00]" />
-             <span className="text-[10px] font-bold text-white">ЦНС Check</span>
-          </div>
-          <div className="bg-neutral-900/50 border border-neutral-800/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 opacity-50">
-             <Heart size={24} className="text-neutral-500" />
-             <span className="text-[10px] font-bold text-neutral-500">ВСР 🔒</span>
+             <Brain size={28} className="text-white" />
+             <span className="text-xs font-bold text-white uppercase tracking-widest">ЦНС Check</span>
           </div>
        </div>
 
