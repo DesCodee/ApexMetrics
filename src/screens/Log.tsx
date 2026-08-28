@@ -100,7 +100,7 @@ export default function Log({ user }: { user: UserProfile }) {
              <span className="text-xs font-bold text-white uppercase tracking-widest">Тренировка</span>
           </div>
           <div 
-             className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-neutral-700"
+             className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-neutral-700"
              onClick={() => { triggerHaptic(); setActiveView('workout'); }}
           >
              <Brain size={28} className="text-white" />
@@ -109,7 +109,7 @@ export default function Log({ user }: { user: UserProfile }) {
        </div>
 
        {/* Water Tracker */}
-       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5">
+       <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-3xl p-5">
           <div className="flex justify-between items-center mb-4">
              <div className="flex items-center gap-2 text-white font-bold text-sm">
                 <Droplet size={14} className="text-blue-400" /> Вода
@@ -120,7 +120,7 @@ export default function Log({ user }: { user: UserProfile }) {
           </div>
           <div className="flex items-center justify-between gap-2">
              <button 
-               className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center active:scale-95 transition-transform"
+               className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center active:scale-95 transition-transform"
                onClick={() => { triggerHaptic(); updateWater(Math.max(0, waterGlasses - 1)); }}
              >
                 <Minus size={14} />
@@ -130,7 +130,7 @@ export default function Log({ user }: { user: UserProfile }) {
                 {Array.from({ length: maxGlasses }).map((_, i) => (
                    <div 
                      key={i} 
-                     className={`w-4 h-7 rounded-full transition-colors duration-300 ${i < waterGlasses ? 'bg-blue-400' : 'bg-neutral-800'}`} 
+                     className={`w-4 h-7 rounded-full transition-colors duration-300 ${i < waterGlasses ? 'bg-blue-400' : 'bg-white/[0.06]'}`} 
                    />
                 ))}
              </div>
@@ -145,7 +145,7 @@ export default function Log({ user }: { user: UserProfile }) {
        </div>
 
        {/* Daily Manual Stats Form */}
-       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 space-y-5">
+       <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-3xl p-5 space-y-5">
           <div className="flex justify-between items-center">
              <div className="text-sm font-bold text-white">Дневные показатели</div>
              <div className="text-xs font-bold text-[#D4FF00]">{currentCalories} <span className="text-neutral-500">ккал</span></div>
@@ -163,7 +163,7 @@ export default function Log({ user }: { user: UserProfile }) {
                   value={protein} 
                   onChange={(e) => setProtein(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
                 />
              </div>
              <div>
@@ -173,7 +173,7 @@ export default function Log({ user }: { user: UserProfile }) {
                   value={fats} 
                   onChange={(e) => setFats(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
                 />
              </div>
              <div>
@@ -183,7 +183,7 @@ export default function Log({ user }: { user: UserProfile }) {
                   value={carbs} 
                   onChange={(e) => setCarbs(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-black border border-neutral-800 rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
                 />
              </div>
           </div>
@@ -195,14 +195,14 @@ export default function Log({ user }: { user: UserProfile }) {
                value={steps} 
                onChange={(e) => setSteps(e.target.value)}
                placeholder="10000"
-               className="w-full bg-black border border-neutral-800 rounded-xl py-3 px-3 text-center text-white text-lg font-bold outline-none focus:border-[#D4FF00]" 
+               className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-3 px-3 text-center text-white text-lg font-bold outline-none focus:border-[#D4FF00]" 
              />
           </div>
 
           <button 
              onClick={handleSaveStats}
              disabled={isSavingStats}
-             className="w-full bg-neutral-800 text-white font-bold text-sm py-3 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+             className="w-full bg-white/[0.06] text-white font-bold text-sm py-3 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
           >
              {isSavingStats ? 'Сохранение...' : 'Сохранить показатели'}
           </button>

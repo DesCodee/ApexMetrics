@@ -305,15 +305,15 @@ export default function Workouts({ user }: { user: UserProfile }) {
      return (
        <div className="p-5 space-y-4 animate-in fade-in duration-300">
          <div className="flex justify-between items-end mb-6">
-           <div className="h-8 bg-neutral-900 rounded-lg w-48 animate-pulse"></div>
+           <div className="h-8 bg-white/[0.03] backdrop-blur-2xl rounded-lg w-48 animate-pulse"></div>
          </div>
          {[1, 2, 3].map((i) => (
-           <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 w-full h-32 animate-pulse flex flex-col justify-between">
-              <div className="h-4 bg-neutral-800 rounded w-1/3"></div>
-              <div className="h-6 bg-neutral-800 rounded w-2/3"></div>
+           <div key={i} className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 w-full h-32 animate-pulse flex flex-col justify-between">
+              <div className="h-4 bg-white/[0.06] rounded w-1/3"></div>
+              <div className="h-6 bg-white/[0.06] rounded w-2/3"></div>
               <div className="flex gap-2">
-                 <div className="h-6 bg-neutral-800 rounded w-16"></div>
-                 <div className="h-6 bg-neutral-800 rounded w-20"></div>
+                 <div className="h-6 bg-white/[0.06] rounded w-16"></div>
+                 <div className="h-6 bg-white/[0.06] rounded w-20"></div>
               </div>
            </div>
          ))}
@@ -334,7 +334,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
         </div>
         
         <div className="space-y-6">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
+          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
             <div className="flex justify-between items-center mb-4">
               <label className="text-sm font-bold text-white flex items-center gap-2"><Moon size={16} className="text-blue-400"/> Сон</label>
               <span className="text-[#D4FF00] font-bold">{sleepHours} ч</span>
@@ -342,7 +342,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
             <input type="range" min="0" max="12" step="0.5" value={sleepHours} onChange={(e) => setSleepHours(Number(e.target.value))} className="w-full accent-[#D4FF00]" />
           </div>
 
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
+          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
             <div className="flex justify-between items-center mb-4">
               <label className="text-sm font-bold text-white flex items-center gap-2"><Activity size={16} className="text-orange-400"/> Мышечная боль (1-10)</label>
               <span className="text-[#D4FF00] font-bold">{soreness}</span>
@@ -350,7 +350,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
             <input type="range" min="1" max="10" step="1" value={soreness} onChange={(e) => setSoreness(Number(e.target.value))} className="w-full accent-[#D4FF00]" />
           </div>
 
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
+          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
             <div className="flex justify-between items-center mb-4">
               <label className="text-sm font-bold text-white flex items-center gap-2"><ShieldAlert size={16} className="text-red-400"/> Уровень стресса (1-10)</label>
               <span className="text-[#D4FF00] font-bold">{stress}</span>
@@ -426,15 +426,15 @@ export default function Workouts({ user }: { user: UserProfile }) {
         
         {/* Rest presets - injected after header */}
         <div className="flex gap-2 my-4">
-            <button onClick={() => startRest(60)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">60s</button>
-            <button onClick={() => startRest(90)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">90s</button>
-            <button onClick={() => startRest(120)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">120s</button>
+            <button onClick={() => startRest(60)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">60s</button>
+            <button onClick={() => startRest(90)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">90s</button>
+            <button onClick={() => startRest(120)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">120s</button>
         </div>
 
         
         <div className="space-y-8">
           {activeSession.exercises?.map((ex: any, i: number) => (
-            <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+            <div key={i} className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
               <div className="font-semibold text-sm text-white mb-1">{ex.name}</div>
               <div className="text-xs text-neutral-500 mb-4 flex justify-between">
                  <span>{ex.sets}х{ex.reps}</span>
@@ -452,27 +452,27 @@ export default function Workouts({ user }: { user: UserProfile }) {
                 </div>
                 {sessionData[i]?.map((set: any, sIdx: number) => (
                   <div key={sIdx} className="flex gap-2 items-center">
-                    <div className="w-8 text-center text-neutral-500 text-sm font-semibold bg-neutral-800/50 rounded-lg py-2">{sIdx + 1}</div>
+                    <div className="w-8 text-center text-neutral-500 text-sm font-semibold bg-white/[0.06]/50 rounded-lg py-2">{sIdx + 1}</div>
                     <input 
                       type="number" 
                       placeholder="0"
                       value={set.weight}
                       onChange={(e) => updateSet(i, sIdx, 'weight', e.target.value)}
-                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
                       type="number" 
                       placeholder="0"
                       value={set.reps}
                       onChange={(e) => updateSet(i, sIdx, 'reps', e.target.value)}
-                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
                       type="number" 
                       placeholder={ex.rpe}
                       value={set.rpe}
                       onChange={(e) => updateSet(i, sIdx, 'rpe', e.target.value)}
-                      className="flex-1 w-0 bg-black border border-neutral-800 rounded-xl py-2 text-center text-neutral-400 text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-neutral-400 text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                   </div>
                 ))}
@@ -507,11 +507,11 @@ export default function Workouts({ user }: { user: UserProfile }) {
            <p className="text-neutral-400 text-sm mb-8">Отличная работа. Твоя статистика обновлена.</p>
            
            <div className="grid grid-cols-2 gap-4 w-full mb-8">
-              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-center">
+              <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Тоннаж</div>
                  <div className="text-2xl font-bold text-white">{summaryData.currentVolume} <span className="text-sm font-medium text-neutral-500">кг</span></div>
               </div>
-              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-center">
+              <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Прогресс</div>
                  <div className={`text-2xl font-bold ${summaryData.percentChange >= 0 ? 'text-[#D4FF00]' : 'text-red-400'}`}>
                     {summaryData.percentChange >= 0 ? '+' : ''}{summaryData.percentChange}%
@@ -549,13 +549,13 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
        <div className="space-y-3">
          {plans.length === 0 && !error ? (
-           <div className="text-center p-8 bg-neutral-900 border border-neutral-800 rounded-2xl">
+           <div className="text-center p-8 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl">
               <div className="text-neutral-500 text-sm mb-4">Программа еще не сгенерирована.</div>
            </div>
          ) : plans.map((p: any, i: number) => (
-           <div key={p.id || i} className={`p-4 rounded-2xl border transition-all ${p.status === 'completed' ? 'bg-neutral-900/50 border-neutral-800/50 opacity-60' : p.status === 'next' ? 'bg-[#D4FF00]/5 border-[#D4FF00]/30 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.15)]' : 'bg-neutral-900 border-neutral-800'} flex items-center justify-between`}>
+           <div key={p.id || i} className={`p-4 rounded-2xl border transition-all ${p.status === 'completed' ? 'bg-white/[0.03] backdrop-blur-2xl/50 border-neutral-800/50 opacity-60' : p.status === 'next' ? 'bg-[#D4FF00]/5 border-[#D4FF00]/30 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.15)]' : 'bg-white/[0.03] backdrop-blur-2xl border-neutral-800'} flex items-center justify-between`}>
              <div className="flex items-center gap-4">
-               <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-neutral-800 text-neutral-500' : p.status === 'next' ? 'bg-[#D4FF00] text-black' : 'bg-neutral-800 text-neutral-500'}`}>
+               <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-white/[0.06] text-neutral-500' : p.status === 'next' ? 'bg-[#D4FF00] text-black' : 'bg-white/[0.06] text-neutral-500'}`}>
                  {p.status === 'completed' ? <CheckCircle size={20} /> : <Dumbbell size={20} />}
                </div>
                <div>

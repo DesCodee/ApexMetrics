@@ -68,7 +68,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
               <h1 className="text-3xl font-serif text-white mb-2">Apex Pro Активен</h1>
               <p className="text-neutral-400 text-sm mb-8">Все функции ИИ, премиальные планы и глубокая аналитика разблокированы.</p>
               
-              <button onClick={handleLogout} className="mx-auto px-4 py-2 rounded-full bg-neutral-900 flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
+              <button onClick={handleLogout} className="mx-auto px-4 py-2 rounded-full bg-white/[0.03] backdrop-blur-2xl flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
                  <LogOut size={14} />
                  <span className="text-xs font-bold uppercase tracking-widest">Сбросить профиль</span>
               </button>
@@ -81,7 +81,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        
        <header className="flex justify-between items-center pt-2">
           <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Управление</div>
-          <button onClick={handleLogout} className="px-3 py-1.5 rounded-full bg-neutral-900 flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
+          <button onClick={handleLogout} className="px-3 py-1.5 rounded-full bg-white/[0.03] backdrop-blur-2xl flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
              <LogOut size={12} />
              <span className="text-[10px] font-bold uppercase tracking-widest">Сбросить профиль</span>
           </button>
@@ -98,7 +98,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        {/* Pricing Cards */}
        <div className="flex gap-3 mt-8">
           <div 
-             className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-center active:scale-95 transition-transform"
+             className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 flex flex-col justify-center active:scale-95 transition-transform"
              onClick={handlePayment}
           >
              <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Месяц</div>
@@ -107,7 +107,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
           </div>
           
           <div 
-             className="flex-[1.5] bg-neutral-900 border border-[#D4FF00] rounded-2xl p-4 relative shadow-[0_0_20px_rgba(212,255,0,0.1)] active:scale-95 transition-transform"
+             className="flex-[1.5] bg-white/[0.03] backdrop-blur-2xl border border-[#D4FF00] rounded-2xl p-4 relative shadow-[0_0_20px_rgba(212,255,0,0.1)] active:scale-95 transition-transform"
              onClick={handlePayment}
           >
              <div className="absolute -top-3 left-4 bg-[#D4FF00] text-black text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">
@@ -121,7 +121,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        </div>
 
        {/* Features */}
-       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 mt-4">
+       <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-3xl p-6 mt-4">
           <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-6">Всё включено</div>
           
           <div className="space-y-4">

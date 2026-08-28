@@ -64,7 +64,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
           </h1>
         </div>
         <div className="flex gap-2">
-          <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-neutral-400">
+          <div className="w-7 h-7 bg-white/[0.06] rounded-full flex items-center justify-center text-xs font-bold text-neutral-400">
             {tgUser?.first_name && tgUser.first_name.length > 0 ? tgUser.first_name[0].toUpperCase() : 'A'}
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
 
       {/* Mini Cards */}
       <div className="grid grid-cols-3 gap-3">
-         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col justify-between h-24">
+         <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24">
             <div className="flex items-center gap-1.5 text-neutral-500">
                <Droplet size={12} />
                <span className="text-[9px] uppercase font-bold tracking-widest">Вода</span>
@@ -142,7 +142,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
             </div>
          </div>
 
-         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
+         <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
             <div className="flex items-center gap-1.5 text-neutral-500">
                <Moon size={12} />
                <span className="text-[9px] uppercase font-bold tracking-widest">Сон</span>
@@ -156,7 +156,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
             </div>
          </div>
 
-         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
+         <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
             <div className="flex items-center gap-1.5 text-[#D4FF00]">
                <Brain size={12} />
                <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-500">ЦНС</span>
@@ -172,7 +172,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
       </div>
 
       {/* Steps */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4">
+      <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
          <div className="flex justify-between items-center mb-3">
              <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Шаги</div>
              <div className="text-white font-bold text-lg">{steps} <span className="text-xs text-neutral-500 font-medium">/ 10,000</span></div>
@@ -191,7 +191,7 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
       {todayTonnage === 0 && history.length === 0 && (
          <div className="pt-2">
             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">Активность</div>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+            <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-neutral-700 mb-4">
                     <CheckCircle size={32} />
                 </div>
@@ -207,9 +207,9 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">Активность за сегодня</div>
             
             <div className="space-y-2">
-               <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center justify-between">
+               <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 flex items-center justify-between">
                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400">
+                       <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-neutral-400">
                           <ChevronUp size={16} />
                        </div>
                        <div>
