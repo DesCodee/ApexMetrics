@@ -6,6 +6,12 @@ import { UserProfile } from './appEngine';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
+export const logEvent = (eventName: string, eventParams?: any) => {
+    // Firebase Analytics is not provisioned in this environment (prevents 404 config fetch error).
+    // Logging to console for MVP tracking:
+    console.log(`[Analytics] ${eventName}`, eventParams || '');
+};
+
 // Custom auth object to satisfy existing codebase dependencies
 export const auth = {
     currentUser: null as { uid: string } | null

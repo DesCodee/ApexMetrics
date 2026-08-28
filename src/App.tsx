@@ -34,6 +34,10 @@ export default function App() {
         setTgUser(tg.initDataUnsafe.user);
       }
     }
+    
+    import('./firebase').then(({ logEvent }) => {
+        logEvent('app_opened');
+    });
 
     // 2. Initialize Firebase and check persistence
     initFirebaseUser().then(async (firebaseUser: any) => {

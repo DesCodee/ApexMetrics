@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness } from '../appEngine';
 import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info } from 'lucide-react';
-import { loadWorkoutLogs, saveWorkoutLog, auth } from '../firebase';
+import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent } from '../firebase';
 
 export default function Workouts({ user }: { user: UserProfile }) {
   const [activeSession, setActiveSession] = useState<any | null>(null);
@@ -23,6 +23,35 @@ export default function Workouts({ user }: { user: UserProfile }) {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check local storage for active session recovery
+    const cachedSession = localStorage.getItem('apex_active_session');
+    const cachedData = localStorage.getItem('apex_session_data');
+    if (cachedSession && cachedData) {
+      try {
+        setActiveSession(JSON.parse(cachedSession));
+        setSessionData(JSON.parse(cachedData));
+        setViewState('logging');
+      } catch(e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    // Manage closing confirmation and local storage sync
+    const tg = (window as any).Telegram?.WebApp;
+    if (viewState === 'logging' && activeSession) {
+      if (tg?.enableClosingConfirmation) tg.enableClosingConfirmation();
+      localStorage.setItem('apex_active_session', JSON.stringify(activeSession));
+      localStorage.setItem('apex_session_data', JSON.stringify(sessionData));
+    } else {
+      if (tg?.disableClosingConfirmation) tg.disableClosingConfirmation();
+      if (viewState === 'idle' || viewState === 'summary') {
+          localStorage.removeItem('apex_active_session');
+          localStorage.removeItem('apex_session_data');
+      }
+    }
+  }, [viewState, activeSession, sessionData]);
 
   const fetchOrGeneratePlans = async () => {
     setLoading(true);
@@ -138,6 +167,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
     const result = ApexEngine.calculateCNSReadiness(sleepHours, soreness, stress, 0);
     setCnsResult(result);
     setViewState('cns_result');
+    logEvent('cns_checked', { score: result.score, status: result.status });
   };
 
   const proceedToWorkout = () => {
@@ -151,9 +181,18 @@ export default function Workouts({ user }: { user: UserProfile }) {
   };
 
   const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string) => {
+    // Input validation
+    let numVal = parseFloat(value);
+    if (value !== '' && (isNaN(numVal) || numVal < 0)) return; // No negative or non-numbers
+    if (field === 'weight' && numVal > 500) numVal = 500;
+    if (field === 'reps' && numVal > 100) numVal = 100;
+    if (field === 'rpe' && numVal > 10) numVal = 10;
+    
+    const finalValue = value === '' ? '' : String(numVal);
+
     setSessionData((prev: any) => {
       const newData = { ...prev };
-      newData[exerciseIndex][setIndex][field] = value;
+      newData[exerciseIndex][setIndex][field] = finalValue;
       return newData;
     });
   };
@@ -203,6 +242,8 @@ export default function Workouts({ user }: { user: UserProfile }) {
       
       setSummaryData({ ...metrics, log: workoutLog });
       
+      logEvent('workout_completed', { title: activeSession.title, tonnage: metrics.totalVolume });
+      
       // reload plans to reflect completion (We actually need to mark the plan as completed, but simplified here)
       // For TMA flow, just reloading is fine
       setViewState('summary');
@@ -224,9 +265,21 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   if (loading) {
      return (
-       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-         <div className="w-8 h-8 border-4 border-[#D4FF00] border-t-transparent rounded-full animate-spin"></div>
-         <div className="text-neutral-400 text-sm animate-pulse">Синхронизация с ИИ...</div>
+       <div className="p-5 space-y-4 animate-in fade-in duration-300">
+         <div className="flex justify-between items-end mb-6">
+           <div className="h-8 bg-neutral-900 rounded-lg w-48 animate-pulse"></div>
+         </div>
+         {[1, 2, 3].map((i) => (
+           <div key={i} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 w-full h-32 animate-pulse flex flex-col justify-between">
+              <div className="h-4 bg-neutral-800 rounded w-1/3"></div>
+              <div className="h-6 bg-neutral-800 rounded w-2/3"></div>
+              <div className="flex gap-2">
+                 <div className="h-6 bg-neutral-800 rounded w-16"></div>
+                 <div className="h-6 bg-neutral-800 rounded w-20"></div>
+              </div>
+           </div>
+         ))}
+         <div className="text-center text-neutral-500 text-xs mt-4 animate-pulse">Синхронизация с AI тренером...</div>
        </div>
      );
   }

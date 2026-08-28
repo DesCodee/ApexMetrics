@@ -1,15 +1,28 @@
+import { useEffect, useState } from 'react';
 import { UserProfile } from '../appEngine';
 import { Crown, CheckCircle2, LogOut } from 'lucide-react';
-import { deleteUserProfile, auth } from '../firebase';
+import { deleteUserProfile, auth, saveUserProfile, logEvent } from '../firebase';
 
 export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (u: UserProfile | null) => void }) {
-  const triggerHaptic = () => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    logEvent('paywall_viewed');
+  }, []);
+
+  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' | 'success' = 'medium') => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    if (tg?.HapticFeedback) {
+        if (type === 'success') {
+            tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            tg.HapticFeedback.impactOccurred(type as any);
+        }
+    }
   };
 
   const handleLogout = async () => {
-    triggerHaptic();
+    triggerHaptic('medium');
     if (window.confirm('Вы уверены, что хотите полностью удалить профиль и начать заново? Все данные будут стерты.')) {
         if (auth.currentUser) {
             await deleteUserProfile(auth.currentUser.uid);
@@ -17,6 +30,51 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
         onUpdate(null);
     }
   };
+
+  const handlePayment = async () => {
+    logEvent('paywall_click');
+    triggerHaptic('heavy');
+    setIsProcessing(true);
+    
+    // Simulate Telegram Stars Payment Flow
+    setTimeout(async () => {
+        try {
+            if (auth.currentUser) {
+                const updatedUser = { ...user, accessState: 'Beta-VIP' as const };
+                await saveUserProfile(updatedUser, auth.currentUser.uid);
+                onUpdate(updatedUser);
+                triggerHaptic('success');
+                const tg = (window as any).Telegram?.WebApp;
+                if (tg?.showAlert) {
+                    tg.showAlert("VIP-доступ активирован! Все AI-фичи открыты.");
+                } else {
+                    alert("VIP-доступ активирован! Все AI-фичи открыты.");
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, 1500);
+  };
+
+  if (user.accessState === 'Beta-VIP') {
+      return (
+          <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24 text-center mt-20">
+              <div className="w-24 h-24 rounded-full bg-[#D4FF00]/10 border border-[#D4FF00]/20 flex items-center justify-center mx-auto mb-6 text-[#D4FF00]">
+                 <Crown size={48} />
+              </div>
+              <h1 className="text-3xl font-serif text-white mb-2">Apex Pro Активен</h1>
+              <p className="text-neutral-400 text-sm mb-8">Все функции ИИ, премиальные планы и глубокая аналитика разблокированы.</p>
+              
+              <button onClick={handleLogout} className="mx-auto px-4 py-2 rounded-full bg-neutral-900 flex items-center gap-2 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all">
+                 <LogOut size={14} />
+                 <span className="text-xs font-bold uppercase tracking-widest">Сбросить профиль</span>
+              </button>
+          </div>
+      );
+  }
 
   return (
     <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24">
@@ -39,13 +97,19 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
 
        {/* Pricing Cards */}
        <div className="flex gap-3 mt-8">
-          <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-center">
+          <div 
+             className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-center active:scale-95 transition-transform"
+             onClick={handlePayment}
+          >
              <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Месяц</div>
              <div className="text-white font-bold text-xl">150 <span className="text-sm">⭐</span><span className="text-xs text-neutral-500 font-medium">/мес</span></div>
              <div className="text-[10px] text-neutral-600 mt-1">≈ $2.99 / мес</div>
           </div>
           
-          <div className="flex-[1.5] bg-neutral-900 border border-[#D4FF00] rounded-2xl p-4 relative shadow-[0_0_20px_rgba(212,255,0,0.1)]">
+          <div 
+             className="flex-[1.5] bg-neutral-900 border border-[#D4FF00] rounded-2xl p-4 relative shadow-[0_0_20px_rgba(212,255,0,0.1)] active:scale-95 transition-transform"
+             onClick={handlePayment}
+          >
              <div className="absolute -top-3 left-4 bg-[#D4FF00] text-black text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">
                 Экономия 45%
              </div>
@@ -84,10 +148,11 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        {/* CTA */}
        <div className="mt-8 text-center space-y-4">
           <button 
-            className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
-            onClick={triggerHaptic}
+            className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] disabled:opacity-50"
+            onClick={handlePayment}
+            disabled={isProcessing}
           >
-            Начать 3 дня бесплатно
+            {isProcessing ? "Обработка платежа..." : "Начать 3 дня бесплатно"}
           </button>
           
           <div className="text-[11px] text-neutral-500">
