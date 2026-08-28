@@ -10,8 +10,8 @@ import Log from './screens/Log';
 import Body from './screens/Body';
 import Pro from './screens/Pro';
 import BottomNav from './components/BottomNav';
+import DevPanel from './components/DevPanel';
 import { auth, initFirebaseUser, loadUserProfile, saveUserProfile } from './firebase';
-
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
@@ -19,6 +19,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [tgUser, setTgUser] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  const [devClicks, setDevClicks] = useState(0);
+  const [showDevPanel, setShowDevPanel] = useState(false);
 
   useEffect(() => {
     // 1. Initialize Telegram WebApp
@@ -64,6 +67,17 @@ export default function App() {
     }
   };
 
+  const handleDevClick = () => {
+      const newClicks = devClicks + 1;
+      setDevClicks(newClicks);
+      if (newClicks >= 5) {
+          setShowDevPanel(true);
+          setDevClicks(0);
+          const tg = (window as any).Telegram?.WebApp;
+          if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      }
+  };
+
   if (loadingAuth) {
     return (
       <ErrorBoundary>
@@ -79,6 +93,15 @@ export default function App() {
     return (
       <ErrorBoundary>
         <Onboarding onComplete={handleCompleteOnboarding} tgUser={tgUser} />
+        <div 
+          onClick={handleDevClick}
+          className="fixed top-2 right-2 text-[8px] text-neutral-800 p-2 z-50 select-none"
+        >
+          v1.0.0
+        </div>
+        {showDevPanel && user && (
+            <DevPanel user={user} onUpdateUser={setUser} onClose={() => setShowDevPanel(false)} />
+        )}
       </ErrorBoundary>
     );
   }
@@ -93,6 +116,17 @@ export default function App() {
         {activeTab === 'pro' && <Pro user={user} onUpdate={handleCompleteOnboarding} />}
         
         <BottomNav active={activeTab} onChange={setActiveTab} />
+
+        <div 
+          onClick={handleDevClick}
+          className="fixed bottom-[70px] right-2 text-[10px] text-neutral-800 p-2 z-40 select-none"
+        >
+          v1.0.0
+        </div>
+
+        {showDevPanel && (
+            <DevPanel user={user} onUpdateUser={setUser} onClose={() => setShowDevPanel(false)} />
+        )}
       </div>
     </ErrorBoundary>
   );

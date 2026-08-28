@@ -1,0 +1,12 @@
+            </div>
+            <div>
+               <div className="text-white font-semibold text-sm">Перейти на Apex Pro</div>
+               <div className="text-[10px] text-neutral-400 mt-0.5">ИИ тренер • ВСР • глубокая аналитика</div>
+            </div>
+         </div>
+         <ChevronRight size={16} className="text-[#D4FF00]" />
+      </motion.div>
+
+    </motion.div>
+  )
+}

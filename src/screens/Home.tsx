@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog } from '../appEngine';
 import { loadWorkoutLogs, loadDailyStats, auth } from '../firebase';
-import { ChevronRight, Droplet, Moon, Brain, ChevronUp, Crown } from 'lucide-react';
+import { ChevronRight, Droplet, Moon, Brain, ChevronUp, Crown, CheckCircle } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any }) {
   const macros = ApexEngine.calculateTDEE(user.weight, user.height, user.age, user.gender, user.activityLevel, user.goal);
@@ -45,7 +46,12 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
   const stepPercent = Math.min(steps / targetSteps, 1) * 100;
 
   return (
-    <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24">
+    <motion.div 
+       initial={{ opacity: 0, y: 10 }}
+       animate={{ opacity: 1, y: 0 }}
+       transition={{ duration: 0.3 }}
+       className="p-5 space-y-6 max-w-lg mx-auto"
+    >
       
       {/* Header */}
       <header className="flex justify-between items-start pt-2 border-b border-neutral-900 pb-4">
@@ -180,6 +186,21 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
          </div>
       </div>
 
+      
+      {/* Empty State */}
+      {todayTonnage === 0 && history.length === 0 && (
+         <div className="pt-2">
+            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">Активность</div>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-neutral-700 mb-4">
+                    <CheckCircle size={32} />
+                </div>
+                <div className="text-white font-bold mb-1">Нет тренировок</div>
+                <div className="text-xs text-neutral-500 max-w-[200px]">Открой дневник и начни свою первую сессию, чтобы здесь появилась статистика.</div>
+            </div>
+         </div>
+      )}
+
       {/* Today's Activity */}
       {todayTonnage > 0 && (
          <div className="pt-2">
@@ -215,7 +236,6 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
          </div>
          <ChevronRight size={16} className="text-[#D4FF00]" />
       </div>
-
-    </div>
-  )
+    </motion.div>
+  );
 }

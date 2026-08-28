@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness } from '../appEngine';
 import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info } from 'lucide-react';
 import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent } from '../firebase';
+import { tgHaptic } from '../utils/haptics';
+import { Timer, X } from 'lucide-react';
 
 export default function Workouts({ user }: { user: UserProfile }) {
   const [activeSession, setActiveSession] = useState<any | null>(null);
@@ -18,6 +20,41 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   // Summary States
   const [summaryData, setSummaryData] = useState<any>(null);
+  const [restTimer, setRestTimer] = useState(0);
+  const [restActive, setRestActive] = useState(false);
+  const [restTotal, setRestTotal] = useState(60);
+
+  useEffect(() => {
+    let interval: any;
+    if (restActive && restTimer > 0) {
+        interval = setInterval(() => {
+            setRestTimer((prev) => {
+                if (prev <= 1) {
+                    tgHaptic('success');
+                    setRestActive(false);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    } else if (restTimer === 0 && restActive) {
+        setRestActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [restActive, restTimer]);
+
+  const startRest = (sec: number) => {
+      tgHaptic('light');
+      setRestTotal(sec);
+      setRestTimer(sec);
+      setRestActive(true);
+  };
+  const stopRest = () => {
+      tgHaptic('light');
+      setRestActive(false);
+      setRestTimer(0);
+  };
+
 
   const [isLogging, setIsLogging] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
@@ -63,10 +100,11 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
     if (loaded.length === 0) {
        try {
+           const forceFallback = localStorage.getItem('apex_force_fallback') === 'true';
            const res = await fetch('/api/generateWorkout', {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ profile: user })
+               body: JSON.stringify({ profile: user, forceFallback })
            });
            
            let data;
@@ -242,7 +280,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
       
       setSummaryData({ ...metrics, log: workoutLog });
       
-      logEvent('workout_completed', { title: activeSession.title, tonnage: metrics.totalVolume });
+      logEvent('workout_completed', { title: activeSession.title, tonnage: metrics.currentVolume });
       
       // reload plans to reflect completion (We actually need to mark the plan as completed, but simplified here)
       // For TMA flow, just reloading is fine
@@ -377,6 +415,22 @@ export default function Workouts({ user }: { user: UserProfile }) {
           <ChevronLeft size={20} /> Завершить позже
         </button>
         <h1 className="text-2xl font-serif text-white">{activeSession.title}</h1>
+        {/* Floating Rest Timer */}
+        {restActive && (
+            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#D4FF00] text-black px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-3 z-50 animate-in slide-in-from-bottom-5">
+                <Timer size={16} />
+                <span className="w-12 text-center text-lg">{Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, '0')}</span>
+                <button onClick={stopRest} className="bg-black/10 rounded-full p-1"><X size={14} /></button>
+            </div>
+        )}
+        
+        {/* Rest presets - injected after header */}
+        <div className="flex gap-2 my-4">
+            <button onClick={() => startRest(60)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">60s</button>
+            <button onClick={() => startRest(90)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">90s</button>
+            <button onClick={() => startRest(120)} className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">120s</button>
+        </div>
+
         
         <div className="space-y-8">
           {activeSession.exercises?.map((ex: any, i: number) => (

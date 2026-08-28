@@ -40,7 +40,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
     setTimeout(async () => {
         try {
             if (auth.currentUser) {
-                const updatedUser = { ...user, accessState: 'Beta-VIP' as const };
+                const updatedUser = { ...user, accessState: 'beta-vip' as const };
                 await saveUserProfile(updatedUser, auth.currentUser.uid);
                 onUpdate(updatedUser);
                 triggerHaptic('success');
@@ -59,7 +59,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
     }, 1500);
   };
 
-  if (user.accessState === 'Beta-VIP') {
+  if (user.accessState === 'beta-vip') {
       return (
           <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24 text-center mt-20">
               <div className="w-24 h-24 rounded-full bg-[#D4FF00]/10 border border-[#D4FF00]/20 flex items-center justify-center mx-auto mb-6 text-[#D4FF00]">

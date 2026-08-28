@@ -1,12 +1,21 @@
-import express from "express";
+const fs = require('fs');
+
+let content = fs.readFileSync('server.ts', 'utf8');
+
+content = content.replace(
+  '// Telegram Stars Payment Webhooks\napp.post("/api/telegram-webhook"',
+  '// END OF generateWorkout catch\n\n// Telegram Stars Payment Webhooks\napp.post("/api/telegram-webhook"'
+);
+
+// I need to extract it out
+content = `import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import * as admin from "firebase-admin";
 
-initializeApp();
-const db = getFirestore();
+admin.initializeApp();
+const db = admin.firestore();
 
 const app = express();
 const PORT = 3000;
@@ -25,13 +34,13 @@ app.post("/api/generateWorkout", async (req, res) => {
       return res.status(400).json({ error: "Missing profile" });
     }
 
-    const prompt = `You are an elite athletic coach. Based on this user profile: 
-- Weight: ${profile.weight}kg
-- Height: ${profile.height}cm
-- Age: ${profile.age}
-- Gender: ${profile.gender}
-- Goal: ${profile.goal}
-- Activity: ${profile.activityLevel}
+    const prompt = \`You are an elite athletic coach. Based on this user profile: 
+- Weight: \${profile.weight}kg
+- Height: \${profile.height}cm
+- Age: \${profile.age}
+- Gender: \${profile.gender}
+- Goal: \${profile.goal}
+- Activity: \${profile.activityLevel}
 
 Generate a 3-day workout program.
 IMPORTANT RULES:
@@ -54,7 +63,7 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
     ]
   },
   ...
-]`;
+]\`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
@@ -133,8 +142,8 @@ app.post("/api/telegram-webhook", async (req, res) => {
        if (payload) {
          await db.collection("users").doc(payload).update({
            isPro: true,
-           accessState: "beta-vip",
-           proGrantedAt: FieldValue.serverTimestamp()
+           accessState: "Beta-VIP",
+           proGrantedAt: admin.firestore.FieldValue.serverTimestamp()
          });
          console.log("Upgraded user", payload, "to Pro");
        }
@@ -163,8 +172,11 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(\`Server running on http://localhost:\${PORT}\`);
   });
 }
 
 startServer();
+`
+
+fs.writeFileSync('server.ts', content);
