@@ -5,7 +5,7 @@ export default function BottomNav({ active, onChange }: any) {
   
   const handleTab = (id: string) => {
     if (tg?.HapticFeedback) {
-        tg.HapticFeedback.selectionChanged();
+        tg.HapticFeedback.impactOccurred('light');
     }
     onChange(id);
   }

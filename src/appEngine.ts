@@ -91,13 +91,13 @@ export const ApexEngine = {
 
         if (totalScore >= 80) {
             status = 'Optimal';
-            recommendation = 'Prime condition. Green light for high intensity (RPE 9-10) and full volume.';
+            recommendation = 'Отличное состояние. Зеленый свет для высокой интенсивности (RPE 9-10) и полного объема.';
         } else if (totalScore >= 60) {
             status = 'Moderate';
-            recommendation = 'Moderate fatigue. Proceed with standard programming, auto-regulate RPE (cap at 8).';
+            recommendation = 'Средняя усталость. Тренируйся по плану, но контролируй интенсивность (не выше RPE 8).';
         } else {
             status = 'Fatigued';
-            recommendation = 'High CNS fatigue. Prioritize active recovery, deload volume by 30-50%, or take a rest day.';
+            recommendation = 'Сильное истощение ЦНС. Обязателен день отдыха или легкое восстановительное кардио.';
         }
 
         return { score: totalScore, status, recommendation };

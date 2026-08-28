@@ -61,7 +61,7 @@ export default function Log({ user }: { user: UserProfile }) {
 
   const triggerHaptic = () => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
   };
 
   if (activeView === 'workout') {

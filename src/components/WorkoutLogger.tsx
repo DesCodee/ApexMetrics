@@ -121,7 +121,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   const triggerHaptic = () => {
     const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
   };
 
   const startCnsCheck = (plan: any) => {
@@ -297,12 +297,22 @@ export default function Workouts({ user }: { user: UserProfile }) {
           <p className="text-neutral-400 text-sm max-w-xs mx-auto leading-relaxed">{cnsResult.recommendation}</p>
         </div>
 
-        <button 
-          onClick={proceedToWorkout}
-          className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] mt-8"
-        >
-          Начать тренировку
-        </button>
+        {cnsResult.score < 40 ? (
+          <button 
+            onClick={() => setViewState('idle')}
+            className="w-full bg-red-500/20 text-red-500 border border-red-500/50 font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform mt-8 flex items-center justify-center gap-2"
+          >
+            <ShieldAlert size={20} />
+            Тренировка отменена (Отдых)
+          </button>
+        ) : (
+          <button 
+            onClick={proceedToWorkout}
+            className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] mt-8"
+          >
+            Начать тренировку
+          </button>
+        )}
       </div>
     );
   }
