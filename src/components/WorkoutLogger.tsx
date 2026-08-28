@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness } from '../appEngine';
-import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert } from 'lucide-react';
+import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info } from 'lucide-react';
 import { loadWorkoutLogs, saveWorkoutLog, auth } from '../firebase';
 
 export default function Workouts({ user }: { user: UserProfile }) {
@@ -156,6 +156,16 @@ export default function Workouts({ user }: { user: UserProfile }) {
       newData[exerciseIndex][setIndex][field] = value;
       return newData;
     });
+  };
+
+  const showRpeInfo = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    const msg = "RPE (Шкала усилий) от 1 до 10:\n\n10 - Отказ (сил нет)\n9 - Запас в 1 повтор\n8 - Запас в 2 повтора\n7 - Запас в 3 повтора\n\nНе доходите до 10 в каждом подходе, чтобы не перегружать нервную систему (ЦНС).";
+    if (tg && tg.showAlert) {
+      tg.showAlert(msg);
+    } else {
+      alert(msg);
+    }
   };
 
   const finishSession = async () => {
@@ -319,7 +329,9 @@ export default function Workouts({ user }: { user: UserProfile }) {
                   <div className="w-8 text-center">#</div>
                   <div className="flex-1 text-center">Вес (кг)</div>
                   <div className="flex-1 text-center">Повторы</div>
-                  <div className="flex-1 text-center">RPE</div>
+                  <div className="flex-1 text-center flex items-center justify-center gap-1 active:scale-95 transition-transform" onClick={showRpeInfo}>
+                     RPE <Info size={10} className="text-[#D4FF00]" />
+                  </div>
                 </div>
                 {sessionData[i]?.map((set: any, sIdx: number) => (
                   <div key={sIdx} className="flex gap-2 items-center">

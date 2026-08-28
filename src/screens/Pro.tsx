@@ -41,16 +41,18 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        <div className="flex gap-3 mt-8">
           <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex flex-col justify-center">
              <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Месяц</div>
-             <div className="text-white font-bold text-2xl">299<span className="text-xs text-neutral-500 font-medium">₽/мес</span></div>
+             <div className="text-white font-bold text-xl">150 <span className="text-sm">⭐</span><span className="text-xs text-neutral-500 font-medium">/мес</span></div>
+             <div className="text-[10px] text-neutral-600 mt-1">≈ $2.99 / мес</div>
           </div>
           
           <div className="flex-[1.5] bg-neutral-900 border border-[#D4FF00] rounded-2xl p-4 relative shadow-[0_0_20px_rgba(212,255,0,0.1)]">
              <div className="absolute -top-3 left-4 bg-[#D4FF00] text-black text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">
-                Экономия 44%
+                Экономия 45%
              </div>
              <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-1 mt-1">Год</div>
-             <div className="text-white font-bold text-2xl">1,990<span className="text-xs text-neutral-500 font-medium">₽/год</span></div>
-             <div className="text-[10px] text-neutral-600 mt-1">≈ 166₽ в месяц</div>
+             <div className="text-white font-bold text-2xl">1000 <span className="text-lg">⭐</span><span className="text-xs text-neutral-500 font-medium">/год</span></div>
+             <div className="text-[10px] text-neutral-600 mt-1">≈ $19.99 / год</div>
+             <div className="text-[#D4FF00] text-[9px] font-bold mt-2 uppercase tracking-tight leading-tight">+ Все будущие VIP-фичи<br/>и AI-обновления включены</div>
           </div>
        </div>
 
@@ -89,7 +91,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
           </button>
           
           <div className="text-[11px] text-neutral-500">
-             Затем 1,990₽/год • Отмена в любой момент
+             Затем 1000 ⭐/год • Отмена в любой момент
           </div>
           
           <div className="flex justify-center items-center gap-2 pt-2">
