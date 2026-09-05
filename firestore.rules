@@ -14,77 +14,54 @@ service cloud.firestore {
 
     // Validation Blueprint for UserProfile
     function isValidUserProfile(data) {
-      return data.keys().hasAll(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 9
+      return data.keys().hasAll(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState'])
         && data.weight is number
         && data.height is number
         && data.age is number
         && data.gender is string && (data.gender == 'M' || data.gender == 'F')
         && data.activityLevel is string && data.activityLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active']
         && data.goal is string && data.goal in ['cut', 'maintain', 'bulk']
-        && data.accessState is string && data.accessState in ['free', 'beta-vip']
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        && data.accessState is string && data.accessState in ['free', 'beta-vip'];
     }
 
     // Validation Blueprint for WorkoutLog
     function isValidWorkoutLog(data, userId) {
-      return data.keys().hasAll(['id', 'userId', 'title', 'day', 'duration', 'status', 'exercises', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['id', 'userId', 'title', 'day', 'duration', 'status', 'date', 'exercises', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['id', 'userId', 'title', 'day', 'duration', 'status', 'exercises'])
         && data.id is string
         && data.userId is string && data.userId == userId
         && data.title is string && data.title.size() <= 100
         && data.day is string && data.day.size() <= 50
         && data.duration is string && data.duration.size() <= 50
         && data.status is string && data.status in ['completed', 'next', 'locked']
-        && (data.keys().hasAll(['date']) ? data.date is string : true)
-        && data.exercises is list && data.exercises.size() <= 50
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        && data.exercises is list && data.exercises.size() <= 50;
     }
     
     // Validation Blueprint for CnsLog
     function isValidCnsLog(data, userId) {
-      return data.keys().hasAll(['userId', 'sleep', 'soreness', 'stress', 'hrDeviation', 'score', 'status', 'createdAt'])
-        && data.keys().size() == 8
+      return data.keys().hasAll(['userId', 'sleep', 'soreness', 'stress', 'score', 'status'])
         && data.userId is string && data.userId == userId
         && data.sleep is number
         && data.soreness is number
         && data.stress is number
-        && data.hrDeviation is number
         && data.score is number
-        && data.status is string && data.status.size() <= 50
-        && data.createdAt is timestamp;
+        && data.status is string && data.status.size() <= 50;
     }
 
     match /users/{userId} {
       allow get, delete: if true;
-      allow create: if isValidId(userId)
-        && isValidUserProfile(incoming()) 
-        && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time;
-      allow update: if isValidUserProfile(incoming())
-        && incoming().createdAt == existing().createdAt
-        && incoming().updatedAt == request.time
-        && incoming().diff(existing()).affectedKeys().hasOnly(['weight', 'height', 'age', 'gender', 'activityLevel', 'goal', 'accessState', 'updatedAt']);
+      allow create, update: if isValidId(userId)
+        && isValidUserProfile(incoming());
       
       match /workouts/{workoutId} {
         allow list, get, delete: if true;
-        allow create: if isValidId(workoutId)
-          && isValidWorkoutLog(incoming(), userId)
-          && incoming().createdAt == request.time
-          && incoming().updatedAt == request.time;
-        allow update: if isValidWorkoutLog(incoming(), userId)
-          && incoming().createdAt == existing().createdAt
-          && incoming().updatedAt == request.time
-          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'day', 'duration', 'status', 'exercises', 'updatedAt', 'date']);
+        allow create, update: if isValidId(workoutId)
+          && isValidWorkoutLog(incoming(), userId);
       }
       
       match /cnsLogs/{logId} {
         allow list, get, delete: if true;
-        allow create: if isValidId(logId)
-          && isValidCnsLog(incoming(), userId)
-          && incoming().createdAt == request.time;
+        allow create, update: if isValidId(logId)
+          && isValidCnsLog(incoming(), userId);
       }
       
       match /daily_stats/{dateId} {

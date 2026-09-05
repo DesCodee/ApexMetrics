@@ -2,18 +2,30 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { initializeApp } from "firebase-admin/app";
+import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-initializeApp();
-const db = getFirestore();
+function getAdminDb() {
+  try {
+    if (getApps().length === 0) {
+      initializeApp();
+    }
+    return getFirestore();
+  } catch (err) {
+    console.warn("Firebase Admin lazy init warning:", err);
+    return null;
+  }
+}
 
 const app = express();
 const PORT = 3000;
 app.use(express.json());
 
-// Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Helper for Gemini AI
+function getGenAI() {
+  if (!process.env.GEMINI_API_KEY) return null;
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
 
 // AI Workout Generation Endpoint
 app.post("/api/generateWorkout", async (req, res) => {
@@ -24,6 +36,9 @@ app.post("/api/generateWorkout", async (req, res) => {
     if (!profile) {
       return res.status(400).json({ error: "Missing profile" });
     }
+
+    const ai = getGenAI();
+    if (!ai) throw new Error("GEMINI_API_KEY is not configured, using fallback plan");
 
     const prompt = `You are an elite athletic coach. Based on this user profile: 
 - Weight: ${profile.weight}kg
@@ -52,12 +67,11 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
       { "name": "Сгибания рук с гантелями", "sets": 3, "reps": "12-15", "rpe": 9 },
       { "name": "Скручивания на пресс", "sets": 3, "reps": "15-20", "rpe": 8 }
     ]
-  },
-  ...
+  }
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
           responseMimeType: "application/json"
@@ -131,12 +145,15 @@ app.post("/api/telegram-webhook", async (req, res) => {
     try {
        // If payload is user ID
        if (payload) {
-         await db.collection("users").doc(payload).update({
-           isPro: true,
-           accessState: "beta-vip",
-           proGrantedAt: FieldValue.serverTimestamp()
-         });
-         console.log("Upgraded user", payload, "to Pro");
+         const db = getAdminDb();
+         if (db) {
+           await db.collection("users").doc(payload).update({
+             isPro: true,
+             accessState: "beta-vip",
+             proGrantedAt: FieldValue.serverTimestamp()
+           });
+           console.log("Upgraded user", payload, "to Pro");
+         }
        }
     } catch(e) {
        console.error("Error upgrading user in webhook:", e);
