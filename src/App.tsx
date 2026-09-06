@@ -16,10 +16,37 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  // Helper to identify user ID synchronously
+  const getStoredUid = () => {
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initDataUnsafe?.user?.id) return String(tg.initDataUnsafe.user.id);
+    } catch {}
+    return 'dev_athlete_123';
+  };
+
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    try {
+      const uid = getStoredUid();
+      const cached = localStorage.getItem(`apex_profile_${uid}`) || localStorage.getItem('apex_profile_dev_athlete_123') || localStorage.getItem('apex_profile_777000');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return null;
+  });
+
   const [activeTab, setActiveTab] = useState('home');
   const [tgUser, setTgUser] = useState<any>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  // If we already have a cached user, we don't block the screen with a spinner!
+  const [loadingAuth, setLoadingAuth] = useState(() => {
+    try {
+      const uid = getStoredUid();
+      const hasProfile = localStorage.getItem(`apex_profile_${uid}`) || localStorage.getItem('apex_profile_dev_athlete_123') || localStorage.getItem('apex_profile_777000');
+      return !hasProfile;
+    } catch {
+      return true;
+    }
+  });
   
   const [devClicks, setDevClicks] = useState(0);
   const [showDevPanel, setShowDevPanel] = useState(false);
@@ -33,7 +60,6 @@ export default function App() {
       tg.setHeaderColor('#000000');
       tg.setBackgroundColor('#000000');
       
-      // Auto-register mock logic using TG ID
       if (tg.initDataUnsafe?.user) {
         setTgUser(tg.initDataUnsafe.user);
       }
@@ -43,7 +69,7 @@ export default function App() {
         logEvent('app_opened');
     });
 
-    // 2. Initialize Firebase and check persistence
+    // 2. Initialize Firebase and sync profile in background
     initFirebaseUser().then(async (firebaseUser: any) => {
       const profile = await loadUserProfile(firebaseUser.uid);
       if (profile) {
@@ -65,6 +91,13 @@ export default function App() {
       }
     } else {
       setUser(null);
+    }
+  };
+
+  const handleProfileUpdate = (data: UserProfile | null) => {
+    setUser(data);
+    if (!data) {
+      setActiveTab('home');
     }
   };
 
@@ -127,10 +160,10 @@ export default function App() {
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className="absolute inset-0 pb-24 overflow-y-auto"
             >
-              {activeTab === 'home' && <Home user={user} tgUser={tgUser} />}
+              {activeTab === 'home' && <Home user={user} tgUser={tgUser} onNavigate={setActiveTab} />}
               {activeTab === 'log' && <Log user={user} />}
-              {activeTab === 'body' && <Body user={user} />}
-              {activeTab === 'pro' && <Pro user={user} onUpdate={handleCompleteOnboarding} />}
+              {activeTab === 'body' && <Body user={user} onNavigate={setActiveTab} onUpdateUser={setUser} />}
+              {activeTab === 'pro' && <Pro user={user} onUpdate={handleProfileUpdate} />}
             </motion.div>
           </AnimatePresence>
         </div>

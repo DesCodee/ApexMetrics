@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { UserProfile, ApexEngine } from '../appEngine';
-import { Apple, Droplet, Dumbbell, Moon, Brain, Heart, Plus, Minus, Activity } from 'lucide-react';
+import { Apple, Droplet, Dumbbell, Moon, Brain, Heart, Plus, Minus, Activity, Check } from 'lucide-react';
 import WorkoutLogger from '../components/WorkoutLogger';
+import CnsRecoveryModal from '../components/CnsRecoveryModal';
 import { loadDailyStats, saveDailyStats, auth } from '../firebase';
+import { tgHaptic } from '../utils/haptics';
 
 export default function Log({ user }: { user: UserProfile }) {
   const [activeView, setActiveView] = useState<'grid' | 'workout'>('grid');
+  const [showCnsModal, setShowCnsModal] = useState(false);
   
   // Hydration
   const [waterGlasses, setWaterGlasses] = useState(0);
@@ -17,6 +20,7 @@ export default function Log({ user }: { user: UserProfile }) {
   const [fats, setFats] = useState('');
   const [steps, setSteps] = useState('');
   const [isSavingStats, setIsSavingStats] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   const dateStr = new Date().toISOString().split('T')[0];
 
@@ -26,10 +30,10 @@ export default function Log({ user }: { user: UserProfile }) {
         const stats = await loadDailyStats(auth.currentUser.uid, dateStr);
         if (stats) {
            setWaterGlasses(stats.waterGlasses || 0);
-           setProtein(stats.protein || '');
-           setCarbs(stats.carbs || '');
-           setFats(stats.fats || '');
-           setSteps(stats.steps || '');
+           setProtein(stats.protein !== undefined && stats.protein !== null ? String(stats.protein) : '');
+           setCarbs(stats.carbs !== undefined && stats.carbs !== null ? String(stats.carbs) : '');
+           setFats(stats.fats !== undefined && stats.fats !== null ? String(stats.fats) : '');
+           setSteps(stats.steps !== undefined && stats.steps !== null ? String(stats.steps) : '');
         }
       }
     };
@@ -38,20 +42,21 @@ export default function Log({ user }: { user: UserProfile }) {
 
   const handleSaveStats = async () => {
      if (!auth.currentUser) return;
-     triggerHaptic();
+     tgHaptic('medium');
      setIsSavingStats(true);
      await saveDailyStats(auth.currentUser.uid, dateStr, {
         waterGlasses,
-        protein: Number(protein) || 0,
-        carbs: Number(carbs) || 0,
-        fats: Number(fats) || 0,
-        steps: Number(steps) || 0
+        protein: Math.max(0, parseFloat(protein.replace(',', '.')) || 0),
+        carbs: Math.max(0, parseFloat(carbs.replace(',', '.')) || 0),
+        fats: Math.max(0, parseFloat(fats.replace(',', '.')) || 0),
+        steps: Math.max(0, parseInt(steps, 10) || 0)
      });
      setIsSavingStats(false);
+     setSavedSuccess(true);
+     tgHaptic('success');
+     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
-  // Auto-save water when it changes (debounced by the user mentally, but let's just save immediately for UX or require explicit save. We will just add it to the save block or save water implicitly).
-  // Actually, we'll save water immediately on change
   const updateWater = async (newVal: number) => {
      setWaterGlasses(newVal);
      if (auth.currentUser) {
@@ -60,8 +65,7 @@ export default function Log({ user }: { user: UserProfile }) {
   };
 
   const triggerHaptic = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    tgHaptic('light');
   };
 
   if (activeView === 'workout') {
@@ -70,7 +74,7 @@ export default function Log({ user }: { user: UserProfile }) {
            <div className="px-5 pt-5 pb-2">
               <button 
                 onClick={() => { triggerHaptic(); setActiveView('grid'); }}
-                className="text-[#D4FF00] text-sm font-bold uppercase tracking-widest"
+                className="text-[#D4FF00] text-sm font-bold uppercase tracking-widest hover:underline flex items-center gap-1"
               >
                  ← Назад в Дневник
               </button>
@@ -80,8 +84,9 @@ export default function Log({ user }: { user: UserProfile }) {
      );
   }
 
+  const cleanNum = (val: string) => parseFloat(val.replace(',', '.')) || 0;
+  const currentCalories = Math.round((cleanNum(protein) * 4) + (cleanNum(carbs) * 4) + (cleanNum(fats) * 9));
   const macros = ApexEngine.calculateTDEE(user.weight, user.height, user.age, user.gender, user.activityLevel, user.goal);
-  const currentCalories = (Number(protein) * 4) + (Number(carbs) * 4) + (Number(fats) * 9);
   const calPercent = Math.min(currentCalories / (macros.calories || 2000), 1) * 100;
 
   return (
@@ -93,17 +98,17 @@ export default function Log({ user }: { user: UserProfile }) {
        {/* Main Actions */}
        <div className="grid grid-cols-2 gap-3">
           <div 
-             className="bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+             className="bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform cursor-pointer hover:bg-[#D4FF00]/15"
              onClick={() => { triggerHaptic(); setActiveView('workout'); }}
           >
              <Dumbbell size={28} className="text-[#D4FF00]" />
              <span className="text-xs font-bold text-white uppercase tracking-widest">Тренировка</span>
           </div>
           <div 
-             className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-neutral-700"
-             onClick={() => { triggerHaptic(); setActiveView('workout'); }}
+             className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform hover:border-purple-500/40 cursor-pointer"
+             onClick={() => { triggerHaptic(); setShowCnsModal(true); }}
           >
-             <Brain size={28} className="text-white" />
+             <Brain size={28} className="text-purple-400" />
              <span className="text-xs font-bold text-white uppercase tracking-widest">ЦНС Check</span>
           </div>
        </div>
@@ -120,7 +125,7 @@ export default function Log({ user }: { user: UserProfile }) {
           </div>
           <div className="flex items-center justify-between gap-2">
              <button 
-               className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center active:scale-95 transition-transform"
+               className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center active:scale-95 transition-transform hover:bg-white/[0.1]"
                onClick={() => { triggerHaptic(); updateWater(Math.max(0, waterGlasses - 1)); }}
              >
                 <Minus size={14} />
@@ -136,7 +141,7 @@ export default function Log({ user }: { user: UserProfile }) {
              </div>
              
              <button 
-               className="w-8 h-8 rounded-full bg-[#D4FF00] text-black flex items-center justify-center active:scale-95 transition-transform"
+               className="w-8 h-8 rounded-full bg-[#D4FF00] text-black flex items-center justify-center active:scale-95 transition-transform hover:bg-[#c4ed00]"
                onClick={() => { triggerHaptic(); updateWater(Math.min(maxGlasses, waterGlasses + 1)); }}
              >
                 <Plus size={14} />
@@ -159,39 +164,43 @@ export default function Log({ user }: { user: UserProfile }) {
              <div>
                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Белки (г)</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   value={protein} 
                   onChange={(e) => setProtein(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00] font-medium" 
                 />
              </div>
              <div>
                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Жиры (г)</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   value={fats} 
                   onChange={(e) => setFats(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00] font-medium" 
                 />
              </div>
              <div>
                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block">Углеводы (г)</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   value={carbs} 
                   onChange={(e) => setCarbs(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00]" 
+                  className="w-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 px-3 text-center text-white outline-none focus:border-[#D4FF00] font-medium" 
                 />
              </div>
           </div>
 
           <div>
-             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block flex items-center gap-1"><Activity size={12}/> Шаги</label>
+             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1 block flex items-center gap-1"><Activity size={12}/> Шаги за день</label>
              <input 
-               type="number" 
+               type="text" 
+               inputMode="numeric"
                value={steps} 
                onChange={(e) => setSteps(e.target.value)}
                placeholder="10000"
@@ -202,11 +211,25 @@ export default function Log({ user }: { user: UserProfile }) {
           <button 
              onClick={handleSaveStats}
              disabled={isSavingStats}
-             className="w-full bg-white/[0.06] text-white font-bold text-sm py-3 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+             className={`w-full font-bold text-sm py-3.5 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 ${
+                savedSuccess ? 'bg-emerald-500 text-black' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'
+             } disabled:opacity-50`}
           >
-             {isSavingStats ? 'Сохранение...' : 'Сохранить показатели'}
+             {isSavingStats ? (
+                'Сохранение...'
+             ) : savedSuccess ? (
+                <><Check size={16} /> Сохранено!</>
+             ) : (
+                'Сохранить показатели'
+             )}
           </button>
        </div>
+
+       {/* CNS Modal integration */}
+       <CnsRecoveryModal 
+          isOpen={showCnsModal}
+          onClose={() => setShowCnsModal(false)}
+       />
     </div>
   )
 }

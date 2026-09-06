@@ -17,7 +17,7 @@ export default function BottomNav({ active, onChange }: any) {
         <NavItem id="home" icon={Home} label="Главная" active={active} onClick={() => handleTab('home')} />
         <NavItem id="log" icon={PlusSquare} label="Дневник" active={active} onClick={() => handleTab('log')} />
         <NavItem id="body" icon={Activity} label="Тело" active={active} onClick={() => handleTab('body')} />
-        <NavItem id="pro" icon={Crown} label="Pro" active={active} onClick={() => handleTab('pro')} />
+        <NavItem id="pro" icon={Crown} label="VIP" active={active} onClick={() => handleTab('pro')} />
       </div>
     </div>
   )

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ApexEngine, UserProfile, WorkoutLog } from '../appEngine';
+import { ApexEngine, UserProfile, WorkoutLog, formatTonnage } from '../appEngine';
 import { loadWorkoutLogs, loadDailyStats, auth } from '../firebase';
-import { ChevronRight, Droplet, Moon, Brain, ChevronUp, Crown, CheckCircle } from 'lucide-react';
+import { ChevronRight, Droplet, Moon, Brain, ChevronUp, Crown, CheckCircle, ShieldAlert, Sparkles, Dumbbell } from 'lucide-react';
 import { motion } from 'motion/react';
+import CnsRecoveryModal from '../components/CnsRecoveryModal';
 
-export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any }) {
+export default function Home({ user, tgUser, onNavigate }: { user: UserProfile, tgUser: any, onNavigate?: (tab: string) => void }) {
   const macros = ApexEngine.calculateTDEE(user.weight, user.height, user.age, user.gender, user.activityLevel, user.goal);
   
   const [workouts, setWorkouts] = useState<WorkoutLog[]>([]);
   const [dailyStats, setDailyStats] = useState<any>({});
+  const [showCnsModal, setShowCnsModal] = useState(false);
   
   const todayDateStr = new Date().toISOString().split('T')[0];
 
@@ -22,9 +24,21 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
   // Compute Tonnage from today's completed workouts
   let todayTonnage = 0;
   const todayDateObjStr = new Date().toDateString();
-  workouts.forEach(w => {
-    if (w.status === 'completed' && new Date(w.date || w.createdAt).toDateString() === todayDateObjStr) {
-      todayTonnage += ApexEngine.calculateVolumeMetrics(w).currentVolume;
+  workouts.forEach((w: any) => {
+    if (w.status === 'completed') {
+      const dateVal = w.date || w.createdAt;
+      let workoutDateStr = '';
+      if (typeof dateVal === 'string') {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) workoutDateStr = d.toDateString();
+      } else if (typeof dateVal === 'number') {
+        workoutDateStr = new Date(dateVal).toDateString();
+      } else if (dateVal?.seconds) {
+        workoutDateStr = new Date(dateVal.seconds * 1000).toDateString();
+      }
+      if (workoutDateStr === todayDateObjStr) {
+        todayTonnage += ApexEngine.calculateVolumeMetrics(w).currentVolume;
+      }
     }
   });
 
@@ -42,8 +56,10 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
   const targetSteps = 10000;
   
   const calPercent = isNaN(targetCalories) || targetCalories === 0 ? 0 : Math.min(consumedCalories / targetCalories, 1);
-  const tonPercent = Math.min(todayTonnage / targetTonnage, 1) || 0.05; // Base amount for visual
+  const tonPercent = todayTonnage > 0 ? Math.min(todayTonnage / targetTonnage, 1) : 0;
   const stepPercent = Math.min(steps / targetSteps, 1) * 100;
+  const tonnageDisplay = formatTonnage(todayTonnage);
+  const nextWorkout = workouts.find((w: any) => w.status === 'next') || workouts.find((w: any) => w.status !== 'completed') || workouts[0];
 
   return (
     <motion.div 
@@ -142,34 +158,104 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
             </div>
          </div>
 
-         <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
-            <div className="flex items-center gap-1.5 text-neutral-500">
-               <Moon size={12} />
-               <span className="text-[9px] uppercase font-bold tracking-widest">Сон</span>
+         {/* Sleep Card */}
+         <div 
+           onClick={() => setShowCnsModal(true)}
+           className="bg-white/[0.03] border border-white/[0.08] hover:border-purple-500/30 backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 cursor-pointer transition-all active:scale-95"
+         >
+            <div className="flex items-center justify-between text-neutral-500">
+               <div className="flex items-center gap-1.5">
+                  <Moon size={12} className="text-purple-400" />
+                  <span className="text-[9px] uppercase font-bold tracking-widest">Сон</span>
+               </div>
+               {dailyStats.sleepHours ? <span className="text-[9px] text-purple-400 font-bold">OK</span> : null}
             </div>
             <div>
-               <div className="text-white font-bold text-lg leading-none mb-2">--</div>
-               <div className="w-full bg-black h-1 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-400 w-[0%]" />
+               <div className="text-white font-bold text-lg leading-none mb-2">
+                  {dailyStats.sleepHours ? `${dailyStats.sleepHours} ч` : '--'}
                </div>
-               <div className="text-[9px] text-neutral-600 mt-1">Нет данных</div>
+               <div className="w-full bg-black h-1 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-purple-400 transition-all duration-500" 
+                    style={{ width: `${Math.min(((Number(dailyStats.sleepHours) || 0) / 8), 1) * 100}%` }} 
+                  />
+               </div>
+               <div className="text-[9px] text-neutral-500 mt-1">
+                  {dailyStats.sleepHours ? '/ 8 ч норма' : 'Замерить'}
+               </div>
             </div>
          </div>
 
-         <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 opacity-50">
-            <div className="flex items-center gap-1.5 text-[#D4FF00]">
-               <Brain size={12} />
-               <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-500">ЦНС</span>
+         {/* CNS Card */}
+         <div 
+           onClick={() => setShowCnsModal(true)}
+           className={`bg-white/[0.03] border backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-3 flex flex-col justify-between h-24 cursor-pointer transition-all active:scale-95 ${
+              dailyStats.cnsStatus === 'Optimal' ? 'border-[#D4FF00]/40 hover:border-[#D4FF00]' :
+              dailyStats.cnsStatus === 'Moderate' ? 'border-amber-400/40 hover:border-amber-400' :
+              dailyStats.cnsStatus === 'Fatigued' ? 'border-red-400/40 hover:border-red-400' :
+              'border-white/[0.08] hover:border-[#D4FF00]/30'
+           }`}
+         >
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-1.5 text-[#D4FF00]">
+                  <Brain size={12} className={
+                     dailyStats.cnsStatus === 'Fatigued' ? 'text-red-400' :
+                     dailyStats.cnsStatus === 'Moderate' ? 'text-amber-400' : 'text-[#D4FF00]'
+                  } />
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-400">ЦНС</span>
+               </div>
+               {dailyStats.cnsStatus && (
+                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                     dailyStats.cnsStatus === 'Optimal' ? 'bg-[#D4FF00]' :
+                     dailyStats.cnsStatus === 'Moderate' ? 'bg-amber-400' : 'bg-red-400'
+                  }`} />
+               )}
             </div>
             <div>
-               <div className="text-white font-bold text-lg leading-none mb-2">--</div>
-               <div className="w-full bg-black h-1 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#D4FF00] w-[0%]" />
+               <div className="text-white font-bold text-lg leading-none mb-2">
+                  {dailyStats.cnsScore ? `${dailyStats.cnsScore}%` : 'Тест'}
                </div>
-               <div className="text-[9px] text-neutral-600 mt-1">Нет данных</div>
+               <div className="w-full bg-black h-1 rounded-full overflow-hidden">
+                  <div 
+                     className={`h-full transition-all duration-500 ${
+                        dailyStats.cnsStatus === 'Fatigued' ? 'bg-red-400' :
+                        dailyStats.cnsStatus === 'Moderate' ? 'bg-amber-400' : 'bg-[#D4FF00]'
+                     }`} 
+                     style={{ width: `${dailyStats.cnsScore || 0}%` }} 
+                  />
+               </div>
+               <div className="text-[9px] text-neutral-400 mt-1 font-medium truncate">
+                  {dailyStats.cnsStatus === 'Optimal' ? 'Готовность' :
+                   dailyStats.cnsStatus === 'Moderate' ? 'Умеренно' :
+                   dailyStats.cnsStatus === 'Fatigued' ? 'Истощение' : 'Замерить >'}
+               </div>
             </div>
          </div>
       </div>
+
+      {/* CNS Fatigue Alert Banner if fatigued or moderate */}
+      {dailyStats.cnsStatus && dailyStats.cnsStatus !== 'Optimal' && (
+         <div 
+           onClick={() => setShowCnsModal(true)}
+           className="cursor-pointer bg-gradient-to-r from-red-500/10 via-amber-500/10 to-transparent border border-red-500/30 hover:border-red-500/50 rounded-2xl p-4 flex items-center justify-between transition-all"
+         >
+            <div className="flex items-center gap-3">
+               <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                  <ShieldAlert size={18} />
+               </div>
+               <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                     Истощение ЦНС ({dailyStats.cnsScore}%)
+                     <span className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold uppercase">Smart Deload</span>
+                  </div>
+                  <div className="text-[11px] text-neutral-400 mt-0.5">
+                     Нажмите для протокола реанимации (сон, дыхание, стек)
+                  </div>
+               </div>
+            </div>
+            <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+         </div>
+      )}
 
       {/* Steps */}
       <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
@@ -187,33 +273,67 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
       </div>
 
       
-      {/* Empty State */}
-      {todayTonnage === 0 && history.length === 0 && (
+      {/* Empty State: No workouts generated yet */}
+      {todayTonnage === 0 && workouts.length === 0 && (
          <div className="pt-2">
             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">Активность</div>
-            <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-neutral-700 mb-4">
+            <div 
+              id="home-empty-workouts-card"
+              onClick={() => onNavigate?.('log')}
+              className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer active:scale-[0.98] transition-transform hover:border-neutral-700"
+            >
+                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-[#D4FF00] mb-4">
                     <CheckCircle size={32} />
                 </div>
                 <div className="text-white font-bold mb-1">Нет тренировок</div>
-                <div className="text-xs text-neutral-500 max-w-[200px]">Открой дневник и начни свою первую сессию, чтобы здесь появилась статистика.</div>
+                <div className="text-xs text-neutral-400 max-w-[220px]">Открой дневник и начни свою первую сессию, чтобы здесь появилась статистика.</div>
+                <div className="text-[#D4FF00] text-xs font-bold mt-3 flex items-center gap-1">Открыть дневник →</div>
             </div>
          </div>
       )}
 
-      {/* Today's Activity */}
+      {/* Next Scheduled Workout: Plan ready, not yet trained today */}
+      {todayTonnage === 0 && workouts.length > 0 && (
+         <div className="pt-2">
+            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">План на сегодня</div>
+            <div 
+              id="home-next-workout-card"
+              onClick={() => onNavigate?.('log')}
+              className="bg-white/[0.03] border border-[#D4FF00]/30 backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform hover:border-[#D4FF00]/50"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#D4FF00]/10 text-[#D4FF00] flex items-center justify-center font-bold">
+                       <Dumbbell size={18} />
+                    </div>
+                    <div>
+                       <div className="text-white font-semibold text-sm">{nextWorkout?.title || 'Следующая тренировка'}</div>
+                       <div className="text-xs text-neutral-400">{nextWorkout?.day || 'День 1'} • {nextWorkout?.duration || '60 мин'}</div>
+                    </div>
+                </div>
+                <div className="text-[#D4FF00] font-bold text-xs uppercase tracking-wider flex items-center gap-1">
+                   Начать →
+                </div>
+            </div>
+         </div>
+      )}
+
+      {/* Today's Activity: Completed workout with tonnage */}
       {todayTonnage > 0 && (
          <div className="pt-2">
             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-3 px-1">Активность за сегодня</div>
             
             <div className="space-y-2">
-               <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 flex items-center justify-between">
+               <div 
+                 id="home-today-tonnage-card"
+                 onClick={() => onNavigate?.('log')}
+                 className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+               >
                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-neutral-400">
+                       <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-[#00E5FF]">
                           <ChevronUp size={16} />
                        </div>
                        <div>
-                          <div className="text-white font-semibold text-sm">Тренировка ({todayTonnage} кг)</div>
+                          <div className="text-white font-semibold text-sm">Тренировка ({tonnageDisplay.full})</div>
                           <div className="text-xs text-neutral-500">Тоннаж за сессию</div>
                        </div>
                    </div>
@@ -223,19 +343,43 @@ export default function Home({ user, tgUser }: { user: UserProfile, tgUser: any 
          </div>
       )}
 
-      {/* Upgrade Banner */}
-      <div className="bg-gradient-to-r from-[#D4FF00]/10 to-black border border-[#D4FF00]/20 rounded-2xl p-4 flex justify-between items-center mt-6">
+      {/* VIP Status Banner */}
+      <div 
+        id="home-vip-upgrade-banner"
+        onClick={() => onNavigate?.('pro')}
+        className={`bg-gradient-to-r ${user.accessState === 'beta-vip' ? 'from-purple-500/15 via-[#D4FF00]/10 to-black border-purple-500/30' : 'from-[#D4FF00]/10 to-black border-[#D4FF00]/20'} border rounded-2xl p-4 flex justify-between items-center mt-6 cursor-pointer active:scale-[0.98] transition-transform`}
+      >
          <div className="flex gap-3 items-center">
-            <div className="w-8 h-8 rounded-full bg-[#D4FF00]/20 flex items-center justify-center text-[#D4FF00]">
+            <div className={`w-8 h-8 rounded-full ${user.accessState === 'beta-vip' ? 'bg-purple-500/20 text-purple-300' : 'bg-[#D4FF00]/20 text-[#D4FF00]'} flex items-center justify-center`}>
                <Crown size={14} />
             </div>
             <div>
-               <div className="text-white font-semibold text-sm">Перейти на Apex Pro</div>
-               <div className="text-[10px] text-neutral-400 mt-0.5">ИИ тренер • ВСР • глубокая аналитика</div>
+               <div className="text-white font-semibold text-sm">
+                 {user.accessState === 'beta-vip' ? 'Apex VIP • Доступ открыт' : 'Apex VIP • Раздел в разработке'}
+               </div>
+               <div className="text-[10px] text-neutral-400 mt-0.5">
+                 {user.accessState === 'beta-vip' ? 'Все экспериментальные фичи активны' : 'Ранний доступ • ИИ тренер • Экспериментальные функции'}
+               </div>
             </div>
          </div>
-         <ChevronRight size={16} className="text-[#D4FF00]" />
+         <ChevronRight size={16} className={user.accessState === 'beta-vip' ? 'text-purple-400' : 'text-[#D4FF00]'} />
       </div>
+
+      {/* CNS Recovery & Analytics Modal */}
+      <CnsRecoveryModal 
+        isOpen={showCnsModal}
+        onClose={() => setShowCnsModal(false)}
+        currentScore={dailyStats.cnsScore || 75}
+        currentStatus={dailyStats.cnsStatus || 'Optimal'}
+        workouts={workouts}
+        onCnsUpdated={(newScore, newStatus) => {
+          setDailyStats((prev: any) => ({
+            ...prev,
+            cnsScore: newScore,
+            cnsStatus: newStatus
+          }));
+        }}
+      />
     </motion.div>
   );
 }

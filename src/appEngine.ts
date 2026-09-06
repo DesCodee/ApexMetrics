@@ -58,6 +58,24 @@ export interface VolumeMetrics {
     percentChange: number;
 }
 
+export function formatTonnage(tonnageKg: number): { short: string; full: string; tons: number } {
+    const val = Math.max(0, Math.round(Number(tonnageKg) || 0));
+    const tons = Math.round((val / 1000) * 10) / 10;
+    const formattedKg = val.toLocaleString('ru-RU');
+    if (val >= 1000) {
+        return {
+            short: `${tons.toLocaleString('ru-RU')} т`,
+            full: `${tons.toLocaleString('ru-RU')} т (${formattedKg} кг)`,
+            tons
+        };
+    }
+    return {
+        short: `${formattedKg} кг`,
+        full: `${formattedKg} кг`,
+        tons
+    };
+}
+
 export const ApexEngine = {
     /**
      * Calculates CNS Readiness based on 4 key biological/perceived markers.
@@ -128,13 +146,13 @@ export const ApexEngine = {
             very_active: 1.9
         };
 
-        let tdee = bmr * activityMultipliers[activityLevel];
+        let tdee = bmr * (activityMultipliers[activityLevel] || 1.375);
 
         // 3. Apply Goal Adjustments
         if (goal === 'cut') tdee -= 500;
         if (goal === 'bulk') tdee += 500;
 
-        const calories = Math.round(tdee);
+        const calories = Math.round(tdee) || 2000;
 
         // 4. Calculate Macros
         // Protein: ~2.2g per kg of bodyweight
@@ -156,15 +174,31 @@ export const ApexEngine = {
      * Calculates total workout volume (tonnage) and compares it to a previous session.
      */
     calculateVolumeMetrics(currentWorkout: WorkoutLog, previousWorkout?: WorkoutLog | null): VolumeMetrics {
-        const calculateTonnage = (log: WorkoutLog) => {
-            return log.exercises.reduce((acc, exercise) => {
-                const exerciseVolume = exercise.sets.reduce((setAcc, set) => setAcc + (set.reps * set.weight), 0);
-                return acc + exerciseVolume;
+        const calculateTonnage = (log: any) => {
+            if (!log || !Array.isArray(log.exercises)) return 0;
+            return log.exercises.reduce((acc: number, exercise: any) => {
+                if (!exercise) return acc;
+                // If exercise.sets is an array of sets with reps and weight
+                if (Array.isArray(exercise.sets)) {
+                    const exerciseVolume = exercise.sets.reduce((setAcc: number, set: any) => {
+                        const weight = Math.max(0, Number(set?.weight) || 0);
+                        const reps = Math.max(0, Math.floor(Number(set?.reps) || 0));
+                        return setAcc + (reps * weight);
+                    }, 0);
+                    return acc + exerciseVolume;
+                }
+                // If exercise.sets is a number (e.g. template plan with sets=3, reps=10, weight=...)
+                if (typeof exercise.sets === 'number') {
+                    const weight = Math.max(0, Number(exercise.weight) || 0);
+                    const reps = Math.max(0, Math.floor(Number(exercise.reps) || 0));
+                    return acc + (exercise.sets * reps * weight);
+                }
+                return acc;
             }, 0);
         };
 
-        const currentVolume = calculateTonnage(currentWorkout);
-        const previousVolume = previousWorkout ? calculateTonnage(previousWorkout) : 0;
+        const currentVolume = Math.round(calculateTonnage(currentWorkout));
+        const previousVolume = previousWorkout ? Math.round(calculateTonnage(previousWorkout)) : 0;
 
         const delta = currentVolume - previousVolume;
         
@@ -172,7 +206,7 @@ export const ApexEngine = {
         if (previousVolume === 0) {
             percentChange = currentVolume > 0 ? 100 : 0;
         } else {
-            percentChange = Math.round((delta / previousVolume) * 10000) / 100;
+            percentChange = Math.round((delta / previousVolume) * 100);
         }
 
         return {
@@ -188,5 +222,109 @@ export const ApexEngine = {
      */
     hasBetaVipAccess(profile: UserProfile): boolean {
         return profile.accessState === 'beta-vip';
+    },
+
+    /**
+     * Automatically adapts a workout plan into a CNS-protective Smart Deload session.
+     * Cuts RPE, reduces sets, and swaps high-axial spinal load movements.
+     */
+    adaptWorkoutForDeload(workout: any): any {
+        if (!workout || !workout.exercises) return workout;
+
+        const substitutions: Record<string, { name: string; note: string }> = {
+            'Приседания со штангой': { name: 'Жим ногами (без осевой нагрузки)', note: 'Снижена осевая нагрузка на позвоночник' },
+            'Становая тяга': { name: 'Гиперэкстензия / Сгибания ног', note: 'Снято напряжение с поясницы и ЦНС' },
+            'Жим штанги лежа': { name: 'Жим гантелей на наклонной скамье', note: 'Меньше стресса для связок и суставов' },
+            'Армейский жим': { name: 'Махи гантелями в стороны', note: 'Изоляция плеч вместо тяжелой базы' },
+            'Тяга штанги в наклоне': { name: 'Тяга горизонтального блока к поясу', note: 'Стабильная опора, упор на памп' }
+        };
+
+        const adaptedExercises = workout.exercises.map((ex: any) => {
+            const sub = substitutions[ex.name];
+            const newName = sub ? sub.name : ex.name;
+            const setsCount = typeof ex.sets === 'number' ? Math.max(2, ex.sets - 1) : (Array.isArray(ex.sets) ? Math.max(2, ex.sets.length - 1) : 2);
+
+            return {
+                ...ex,
+                name: newName,
+                sets: setsCount,
+                rpe: 6.5,
+                isDeload: true,
+                originalName: ex.name,
+                note: sub ? sub.note : 'Разгрузочный подход (RPE 6-7, запас 3-4 повт)'
+            };
+        });
+
+        return {
+            ...workout,
+            isDeload: true,
+            title: `${workout.title} [Smart Deload]`,
+            exercises: adaptedExercises
+        };
+    },
+
+    /**
+     * Calculates Acute:Chronic Workload Ratio (ACWR) to monitor overtraining and CNS fatigue.
+     */
+    calculateACWR(workouts: any[]) {
+        const now = Date.now();
+        const dayMs = 24 * 60 * 60 * 1000;
+
+        let acuteTonnage = 0;
+        let chronicTonnage = 0;
+
+        if (Array.isArray(workouts)) {
+            workouts.forEach((w: any) => {
+                if (!w) return;
+                // Only consider completed workouts with actual logged volume
+                if (w.status && w.status !== 'completed') return;
+
+                const dateVal = w.date || w.createdAt;
+                let t = now;
+                if (typeof dateVal === 'string') {
+                    const parsed = new Date(dateVal).getTime();
+                    if (!isNaN(parsed)) t = parsed;
+                } else if (typeof dateVal === 'number') {
+                    t = dateVal;
+                } else if (dateVal?.seconds) {
+                    t = dateVal.seconds * 1000;
+                }
+
+                const diffDays = Math.max(0, (now - t) / dayMs);
+                const ton = ApexEngine.calculateVolumeMetrics(w).currentVolume;
+
+                if (diffDays <= 7) {
+                    acuteTonnage += ton;
+                }
+                if (diffDays <= 28) {
+                    chronicTonnage += ton;
+                }
+            });
+        }
+
+        const weeklyChronicAvg = Math.max(500, chronicTonnage > 0 ? chronicTonnage / 4 : acuteTonnage || 500);
+        const ratio = acuteTonnage === 0 ? 0.85 : parseFloat((acuteTonnage / weeklyChronicAvg).toFixed(2));
+
+        let zone: 'optimal' | 'moderate' | 'high_risk';
+        let label: string;
+
+        if (ratio <= 1.25) {
+            zone = 'optimal';
+            label = 'Оптимальная адаптация (Sweet Spot)';
+        } else if (ratio <= 1.45) {
+            zone = 'moderate';
+            label = 'Повышенная усталость (Риск перегрузки)';
+        } else {
+            zone = 'high_risk';
+            label = 'Опасная зона перетрена (Danger Zone)';
+        }
+
+        return {
+            acuteTonnage: Math.round(acuteTonnage),
+            chronicWeeklyAvg: Math.round(weeklyChronicAvg),
+            ratio,
+            zone,
+            label
+        };
     }
 };

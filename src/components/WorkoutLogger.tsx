@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness } from '../appEngine';
-import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info } from 'lucide-react';
-import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent } from '../firebase';
+import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness, formatTonnage } from '../appEngine';
+import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info, Plus, Trash2, Timer, X, RotateCcw, Trophy } from 'lucide-react';
+import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent, saveCnsLog } from '../firebase';
 import { tgHaptic } from '../utils/haptics';
-import { Timer, X } from 'lucide-react';
+import CnsRecoveryModal from './CnsRecoveryModal';
 
 export default function Workouts({ user }: { user: UserProfile }) {
   const [activeSession, setActiveSession] = useState<any | null>(null);
@@ -17,6 +17,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
   const [soreness, setSoreness] = useState(1);
   const [stress, setStress] = useState(1);
   const [cnsResult, setCnsResult] = useState<CNSReadiness | null>(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   // Summary States
   const [summaryData, setSummaryData] = useState<any>(null);
@@ -88,12 +89,18 @@ export default function Workouts({ user }: { user: UserProfile }) {
           localStorage.removeItem('apex_session_data');
       }
     }
+    return () => {
+      if (tg?.disableClosingConfirmation) tg.disableClosingConfirmation();
+    };
   }, [viewState, activeSession, sessionData]);
 
   const fetchOrGeneratePlans = async () => {
     setLoading(true);
     setError(null);
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      setLoading(false);
+      return;
+    }
     const uid = auth.currentUser.uid;
     
     let loaded = await loadWorkoutLogs(uid);
@@ -200,33 +207,104 @@ export default function Workouts({ user }: { user: UserProfile }) {
     setViewState('cns_check');
   };
 
-  const calculateCns = () => {
+  const startNextCycle = async () => {
+    triggerHaptic();
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const resetPlans = plans.map((p: any, index: number) => ({
+      ...p,
+      status: index === 0 ? 'next' : 'locked',
+      updatedAt: Date.now()
+    }));
+    setPlans(resetPlans);
+    for (const p of resetPlans) {
+      await saveWorkoutLog(uid, p);
+    }
+  };
+
+  const calculateCns = async () => {
     triggerHaptic();
     const result = ApexEngine.calculateCNSReadiness(sleepHours, soreness, stress, 0);
     setCnsResult(result);
     setViewState('cns_result');
     logEvent('cns_checked', { score: result.score, status: result.status });
+    if (auth.currentUser) {
+      await saveCnsLog(auth.currentUser.uid, {
+        sleep: sleepHours,
+        soreness,
+        stress,
+        score: result.score,
+        status: result.status,
+        recommendation: result.recommendation
+      });
+    }
   };
 
   const proceedToWorkout = () => {
     triggerHaptic();
     const initialData: any = {};
     activeSession.exercises?.forEach((ex: any, i: number) => {
-      initialData[i] = Array.from({ length: typeof ex.sets === 'number' ? ex.sets : 3 }).map(() => ({ weight: '', reps: '', rpe: ex.rpe || 8 }));
+      const setsCount = typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3);
+      initialData[i] = Array.from({ length: setsCount }).map((_, sIdx) => {
+        const prevWeight = Array.isArray(ex.sets) && ex.sets[sIdx]?.weight !== undefined ? String(ex.sets[sIdx].weight) : '';
+        const prevReps = Array.isArray(ex.sets) && ex.sets[sIdx]?.reps !== undefined ? String(ex.sets[sIdx].reps) : (typeof ex.reps === 'number' ? String(ex.reps) : '');
+        return { 
+          weight: prevWeight, 
+          reps: prevReps, 
+          rpe: Array.isArray(ex.sets) && ex.sets[sIdx]?.rpe ? ex.sets[sIdx].rpe : (ex.rpe || 8) 
+        };
+      });
     });
     setSessionData(initialData);
     setViewState('logging');
   };
 
+  const addSet = (exerciseIndex: number) => {
+    triggerHaptic();
+    setSessionData((prev: any) => {
+      const currentSets = prev[exerciseIndex] || [];
+      const lastSet = currentSets[currentSets.length - 1] || { weight: '', reps: '', rpe: 8 };
+      return {
+        ...prev,
+        [exerciseIndex]: [
+          ...currentSets,
+          { weight: lastSet.weight || '', reps: lastSet.reps || '', rpe: lastSet.rpe || 8 }
+        ]
+      };
+    });
+  };
+
+  const removeSet = (exerciseIndex: number, setIndex: number) => {
+    triggerHaptic();
+    setSessionData((prev: any) => {
+      const currentSets = prev[exerciseIndex] || [];
+      if (currentSets.length <= 1) return prev;
+      return {
+        ...prev,
+        [exerciseIndex]: currentSets.filter((_: any, idx: number) => idx !== setIndex)
+      };
+    });
+  };
+
   const updateSet = (exerciseIndex: number, setIndex: number, field: string, value: string) => {
-    // Input validation
-    let numVal = parseFloat(value);
-    if (value !== '' && (isNaN(numVal) || numVal < 0)) return; // No negative or non-numbers
-    if (field === 'weight' && numVal > 500) numVal = 500;
-    if (field === 'reps' && numVal > 100) numVal = 100;
-    if (field === 'rpe' && numVal > 10) numVal = 10;
-    
-    const finalValue = value === '' ? '' : String(numVal);
+    // Clean string input (allow empty, Russian commas)
+    if (value === '') {
+      setSessionData((prev: any) => {
+        const newData = { ...prev };
+        newData[exerciseIndex][setIndex][field] = '';
+        return newData;
+      });
+      return;
+    }
+
+    const normalized = value.replace(',', '.');
+    const numVal = parseFloat(normalized);
+    if (isNaN(numVal) || numVal < 0) return;
+
+    let finalValue = normalized;
+    if (field === 'weight' && numVal > 500) finalValue = '500';
+    if (field === 'reps' && numVal > 100) finalValue = '100';
+    if (field === 'rpe' && numVal > 10) finalValue = '10';
 
     setSessionData((prev: any) => {
       const newData = { ...prev };
@@ -253,15 +331,18 @@ export default function Workouts({ user }: { user: UserProfile }) {
     try {
       const mappedExercises = activeSession.exercises.map((ex: any, i: number) => ({
           name: ex.name,
+          reps: ex.reps || '10',
+          rpe: ex.rpe || 8,
           sets: sessionData[i].map((s: any) => ({
             weight: Number(s.weight) || 0,
             reps: Number(s.reps) || 0,
-            rpe: Number(s.rpe) || ex.rpe
+            rpe: Number(s.rpe) || ex.rpe || 8
           }))
       }));
 
+      const currentId = activeSession.id || `workout_${Date.now()}`;
       const workoutLog: WorkoutLog = {
-        id: Date.now().toString(), // Create a new ID for the completed run
+        id: currentId,
         userId: auth.currentUser.uid,
         title: activeSession.title,
         day: activeSession.day,
@@ -269,21 +350,30 @@ export default function Workouts({ user }: { user: UserProfile }) {
         status: 'completed',
         date: new Date().toISOString(),
         exercises: mappedExercises,
-        createdAt: Date.now(),
+        createdAt: activeSession.createdAt || Date.now(),
         updatedAt: Date.now()
       };
       
       await saveWorkoutLog(auth.currentUser.uid, workoutLog);
       
-      // Compute Tonnage for Summary
-      const metrics = ApexEngine.calculateVolumeMetrics(workoutLog, null); // Simplified previous comparison
+      // Advance next plan if locked
+      const updatedPlans = plans.map(p => p.id === currentId ? { ...p, status: 'completed', exercises: mappedExercises } : p);
+      const nextLocked = updatedPlans.find(p => p.status === 'locked');
+      if (nextLocked) {
+        nextLocked.status = 'next';
+        await saveWorkoutLog(auth.currentUser.uid, nextLocked);
+      }
+      setPlans(updatedPlans);
+
+      // Find last previously completed workout for realistic volume comparison
+      const previouslyCompleted = plans.filter(p => p.id !== currentId && p.status === 'completed');
+      const lastCompleted = previouslyCompleted[previouslyCompleted.length - 1] || null;
+      const metrics = ApexEngine.calculateVolumeMetrics(workoutLog, lastCompleted);
       
       setSummaryData({ ...metrics, log: workoutLog });
       
       logEvent('workout_completed', { title: activeSession.title, tonnage: metrics.currentVolume });
       
-      // reload plans to reflect completion (We actually need to mark the plan as completed, but simplified here)
-      // For TMA flow, just reloading is fine
       setViewState('summary');
 
     } catch (e) {
@@ -371,8 +461,8 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   if (viewState === 'cns_result' && cnsResult) {
     return (
-      <div className="p-5 space-y-8 animate-in zoom-in-95 duration-300 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[70vh]">
-        <div className="relative w-32 h-32 mb-4">
+      <div className="p-5 space-y-6 animate-in zoom-in-95 duration-300 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[75vh]">
+        <div className="relative w-32 h-32 mb-2">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="45" fill="none" stroke="#262626" strokeWidth="8" />
             <circle cx="50" cy="50" r="45" fill="none" stroke={cnsResult.status === 'Optimal' ? '#D4FF00' : cnsResult.status === 'Moderate' ? '#F59E0B' : '#EF4444'} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 * (1 - cnsResult.score / 100)} className="transition-all duration-1000 ease-out" />
@@ -384,26 +474,73 @@ export default function Workouts({ user }: { user: UserProfile }) {
         </div>
         
         <div className="text-center">
-          <h2 className="text-2xl font-serif text-white mb-2">{cnsResult.status === 'Optimal' ? 'Готов на 100%' : cnsResult.status === 'Moderate' ? 'Средняя готовность' : 'Высокая усталость'}</h2>
+          <h2 className="text-2xl font-serif text-white mb-2">
+            {cnsResult.status === 'Optimal' ? 'Готов на 100%' : cnsResult.status === 'Moderate' ? 'Средняя готовность' : 'Истощение ЦНС'}
+          </h2>
           <p className="text-neutral-400 text-sm max-w-xs mx-auto leading-relaxed">{cnsResult.recommendation}</p>
         </div>
 
-        {cnsResult.score < 40 ? (
+        {/* Action Buttons */}
+        <div className="w-full space-y-3 pt-2">
+          {cnsResult.status !== 'Optimal' && (
+            <button 
+              onClick={() => {
+                triggerHaptic();
+                const deloadPlan = ApexEngine.adaptWorkoutForDeload(activeSession);
+                setActiveSession(deloadPlan);
+                proceedToWorkout();
+              }}
+              className="w-full bg-[#D4FF00] text-black font-bold text-sm py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] flex items-center justify-center gap-2"
+            >
+              <ShieldAlert size={18} />
+              Адаптировать под ЦНС (Smart Deload)
+            </button>
+          )}
+
+          {cnsResult.status === 'Optimal' && (
+            <button 
+              onClick={proceedToWorkout}
+              className="w-full bg-[#D4FF00] text-black font-bold text-base py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
+            >
+              Начать тренировку
+            </button>
+          )}
+
+          <button 
+            onClick={() => {
+              triggerHaptic();
+              setShowRecoveryModal(true);
+            }}
+            className="w-full bg-white/[0.04] border border-white/[0.1] hover:border-white/[0.2] text-white font-bold text-sm py-3.5 rounded-2xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          >
+            <Brain size={16} className="text-[#D4FF00]" />
+            Протокол восстановления ЦНС
+          </button>
+
+          {cnsResult.status !== 'Optimal' && (
+            <button 
+              onClick={proceedToWorkout}
+              className="w-full bg-transparent text-neutral-500 hover:text-neutral-300 font-medium text-xs py-2 transition-colors"
+            >
+              Тренироваться по плану (Hardcore)
+            </button>
+          )}
+
           <button 
             onClick={() => setViewState('idle')}
-            className="w-full bg-red-500/20 text-red-500 border border-red-500/50 font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform mt-8 flex items-center justify-center gap-2"
+            className="w-full text-neutral-600 hover:text-neutral-400 text-xs py-1 transition-colors"
           >
-            <ShieldAlert size={20} />
-            Тренировка отменена (Отдых)
+            Отложить тренировку на завтра
           </button>
-        ) : (
-          <button 
-            onClick={proceedToWorkout}
-            className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] mt-8"
-          >
-            Начать тренировку
-          </button>
-        )}
+        </div>
+
+        <CnsRecoveryModal 
+          isOpen={showRecoveryModal} 
+          onClose={() => setShowRecoveryModal(false)} 
+          currentScore={cnsResult.score} 
+          currentStatus={cnsResult.status} 
+          workouts={plans} 
+        />
       </div>
     );
   }
@@ -414,7 +551,18 @@ export default function Workouts({ user }: { user: UserProfile }) {
         <button onClick={() => setViewState('idle')} className="flex items-center text-neutral-400 gap-1 mt-2">
           <ChevronLeft size={20} /> Завершить позже
         </button>
-        <h1 className="text-2xl font-serif text-white">{activeSession.title}</h1>
+        <div>
+          <h1 className="text-2xl font-serif text-white">{activeSession.title}</h1>
+          {activeSession.isDeload && (
+            <div className="mt-3 bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-3 flex items-center gap-2.5">
+              <ShieldAlert size={16} className="text-[#D4FF00] shrink-0" />
+              <div className="text-[11px] text-neutral-300 leading-tight">
+                <span className="font-bold text-[#D4FF00]">Smart Deload: </span>
+                Снижена осевая нагрузка, RPE 6-7, фокус на приток крови без отказа.
+              </div>
+            </div>
+          )}
+        </div>
         {/* Floating Rest Timer */}
         {restActive && (
             <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#D4FF00] text-black px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-3 z-50 animate-in slide-in-from-bottom-5">
@@ -437,8 +585,8 @@ export default function Workouts({ user }: { user: UserProfile }) {
             <div key={i} className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
               <div className="font-semibold text-sm text-white mb-1">{ex.name}</div>
               <div className="text-xs text-neutral-500 mb-4 flex justify-between">
-                 <span>{ex.sets}х{ex.reps}</span>
-                 <span className="text-[#D4FF00]">RPE {ex.rpe}</span>
+                 <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)}х{typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
+                 <span className="text-[#D4FF00]">RPE {ex.rpe || 8}</span>
               </div>
               
               <div className="space-y-3">
@@ -454,29 +602,54 @@ export default function Workouts({ user }: { user: UserProfile }) {
                   <div key={sIdx} className="flex gap-2 items-center">
                     <div className="w-8 text-center text-neutral-500 text-sm font-semibold bg-white/[0.06]/50 rounded-lg py-2">{sIdx + 1}</div>
                     <input 
-                      type="number" 
+                      type="text" 
+                      inputMode="decimal"
                       placeholder="0"
                       value={set.weight}
                       onChange={(e) => updateSet(i, sIdx, 'weight', e.target.value)}
                       className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
-                      type="number" 
+                      type="text" 
+                      inputMode="numeric"
                       placeholder="0"
                       value={set.reps}
                       onChange={(e) => updateSet(i, sIdx, 'reps', e.target.value)}
                       className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
                     />
                     <input 
-                      type="number" 
-                      placeholder={ex.rpe}
+                      type="text" 
+                      inputMode="numeric"
+                      placeholder={ex.rpe || '8'}
                       value={set.rpe}
                       onChange={(e) => updateSet(i, sIdx, 'rpe', e.target.value)}
-                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-neutral-400 text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                      className={`flex-1 w-0 bg-white/[0.04] border backdrop-blur-xl rounded-xl py-2 text-center text-sm font-bold outline-none transition-colors ${
+                        set.rpe === '10' ? 'border-amber-400 text-amber-400 focus:border-amber-400' : 'border-white/[0.06] text-neutral-300 focus:border-[#D4FF00]'
+                      }`}
                     />
+                    {sessionData[i]?.length > 1 && (
+                      <button 
+                        type="button" 
+                        onClick={() => removeSet(i, sIdx)}
+                        className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-red-400 transition-colors"
+                        title="Удалить подход"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {/* Add set button */}
+              <button 
+                type="button"
+                onClick={() => addSet(i)}
+                className="mt-3 w-full py-2 bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] rounded-xl flex items-center justify-center gap-1.5 text-xs text-neutral-400 hover:text-[#D4FF00] transition-all"
+              >
+                <Plus size={13} />
+                <span>Добавить подход</span>
+              </button>
             </div>
           ))}
         </div>
@@ -497,33 +670,44 @@ export default function Workouts({ user }: { user: UserProfile }) {
   }
 
   if (viewState === 'summary' && summaryData) {
+     const formattedTonnage = formatTonnage(summaryData.currentVolume);
      return (
         <div className="p-5 space-y-6 animate-in slide-in-from-bottom-8 duration-500 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[80vh] text-center">
-           <div className="w-20 h-20 bg-[#D4FF00]/10 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle size={40} className="text-[#D4FF00]" />
+           <div className="w-20 h-20 bg-[#D4FF00]/10 rounded-full flex items-center justify-center mb-4 text-[#D4FF00]">
+              <CheckCircle size={40} />
            </div>
            
            <h1 className="text-3xl font-serif text-white mb-2">Тренировка завершена!</h1>
-           <p className="text-neutral-400 text-sm mb-8">Отличная работа. Твоя статистика обновлена.</p>
+           <p className="text-neutral-400 text-sm mb-6">Отличная работа. Твоя статистика обновлена.</p>
            
-           <div className="grid grid-cols-2 gap-4 w-full mb-8">
+           <div className="grid grid-cols-2 gap-4 w-full mb-4">
               <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Тоннаж</div>
-                 <div className="text-2xl font-bold text-white">{summaryData.currentVolume} <span className="text-sm font-medium text-neutral-500">кг</span></div>
+                 <div className="text-2xl font-bold text-white leading-tight">{formattedTonnage.short}</div>
+                 {summaryData.currentVolume >= 1000 && (
+                    <div className="text-[11px] text-neutral-400 mt-1">{summaryData.currentVolume.toLocaleString('ru-RU')} кг</div>
+                 )}
               </div>
               <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Прогресс</div>
-                 <div className={`text-2xl font-bold ${summaryData.percentChange >= 0 ? 'text-[#D4FF00]' : 'text-red-400'}`}>
+                 <div className={`text-2xl font-bold leading-tight ${summaryData.percentChange >= 0 ? 'text-[#D4FF00]' : 'text-red-400'}`}>
                     {summaryData.percentChange >= 0 ? '+' : ''}{summaryData.percentChange}%
                  </div>
+                 <div className="text-[11px] text-neutral-500 mt-1">к прошлой сессии</div>
               </div>
            </div>
 
+           {summaryData.currentVolume > 20000 && (
+              <div className="bg-amber-400/10 border border-amber-400/20 text-amber-200 text-xs rounded-xl p-3.5 text-left mb-6 w-full leading-relaxed">
+                 ⚡ <b>Высокий силовой объём:</b> тоннаж рассчитывается как сумма (вес × повторы) по всем подходам. При работе на RPE 10 рекомендуем уделить особое внимание сну и восстановлению ЦНС.
+              </div>
+           )}
+
            <button 
              onClick={closeSummary}
-             className="w-full bg-white text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform"
+             className="w-full bg-white text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-lg hover:bg-neutral-200"
            >
-             Отлично
+             Готово
            </button>
         </div>
      );
@@ -548,23 +732,57 @@ export default function Workouts({ user }: { user: UserProfile }) {
        )}
 
        <div className="space-y-3">
+         {plans.length > 0 && plans.every((p: any) => p.status === 'completed') && (
+           <div className="bg-gradient-to-r from-[#D4FF00]/15 via-white/[0.05] to-transparent border border-[#D4FF00]/40 rounded-2xl p-4 text-center space-y-2">
+             <div className="text-sm font-bold text-white flex items-center justify-center gap-2">
+               <Trophy size={18} className="text-[#D4FF00]" /> Текущий цикл программы завершён!
+             </div>
+             <div className="text-xs text-neutral-400">
+               Отличная работа! Все 3 тренировочных дня закрыты. Вы можете повторить любой день или начать следующий цикл.
+             </div>
+             <button
+               type="button"
+               onClick={startNextCycle}
+               className="mt-2 w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-xs py-3 rounded-xl uppercase tracking-wider active:scale-95 transition-all shadow-[0_0_15px_rgba(212,255,0,0.2)]"
+             >
+               Начать новый цикл (Неделя +1)
+             </button>
+           </div>
+         )}
+
          {plans.length === 0 && !error ? (
            <div className="text-center p-8 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl">
               <div className="text-neutral-500 text-sm mb-4">Программа еще не сгенерирована.</div>
            </div>
          ) : plans.map((p: any, i: number) => (
-           <div key={p.id || i} className={`p-4 rounded-2xl border transition-all ${p.status === 'completed' ? 'bg-white/[0.03] backdrop-blur-2xl/50 border-neutral-800/50 opacity-60' : p.status === 'next' ? 'bg-[#D4FF00]/5 border-[#D4FF00]/30 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.15)]' : 'bg-white/[0.03] backdrop-blur-2xl border-neutral-800'} flex items-center justify-between`}>
+           <div key={p.id || i} className={`p-4 rounded-2xl border transition-all ${p.status === 'completed' ? 'bg-white/[0.03] backdrop-blur-2xl/50 border-neutral-800/50' : p.status === 'next' ? 'bg-[#D4FF00]/5 border-[#D4FF00]/30 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.15)]' : 'bg-white/[0.03] backdrop-blur-2xl border-neutral-800'} flex items-center justify-between`}>
              <div className="flex items-center gap-4">
-               <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-white/[0.06] text-neutral-500' : p.status === 'next' ? 'bg-[#D4FF00] text-black' : 'bg-white/[0.06] text-neutral-500'}`}>
+               <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-[#D4FF00]/10 text-[#D4FF00]' : p.status === 'next' ? 'bg-[#D4FF00] text-black' : 'bg-white/[0.06] text-neutral-500'}`}>
                  {p.status === 'completed' ? <CheckCircle size={20} /> : <Dumbbell size={20} />}
                </div>
                <div>
                  <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-0.5">Тренировка {i + 1}</div>
                  <div className={`font-semibold text-sm ${p.status === 'locked' ? 'text-neutral-400' : 'text-white'}`}>{p.title}</div>
+                 {p.status === 'completed' && <div className="text-[10px] text-[#D4FF00] font-medium mt-0.5">Завершена</div>}
                </div>
              </div>
-             {p.status !== 'completed' && (
-               <button onClick={() => startCnsCheck(p)} className="w-10 h-10 rounded-full bg-[#D4FF00]/20 flex items-center justify-center text-[#D4FF00] shrink-0 active:scale-95 transition-transform hover:bg-[#D4FF00]/30">
+             {p.status === 'completed' ? (
+               <button 
+                 type="button"
+                 onClick={() => startCnsCheck(p)} 
+                 className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-neutral-200 flex items-center gap-1.5 active:scale-95 transition-all border border-white/[0.08]"
+                 title="Повторить тренировку"
+               >
+                 <RotateCcw size={13} className="text-[#D4FF00]" />
+                 <span>Повтор</span>
+               </button>
+             ) : (
+               <button 
+                 type="button"
+                 onClick={() => startCnsCheck(p)} 
+                 className="w-10 h-10 rounded-full bg-[#D4FF00]/20 flex items-center justify-center text-[#D4FF00] shrink-0 active:scale-95 transition-transform hover:bg-[#D4FF00]/30"
+                 title="Начать"
+               >
                  <Play size={16} fill="currentColor" className="ml-1" />
                </button>
              )}

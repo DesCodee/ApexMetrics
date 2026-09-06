@@ -18,7 +18,7 @@ export default function DevPanel({
         setForceFallback(localStorage.getItem('apex_force_fallback') === 'true');
     }, []);
 
-    const togglePro = async () => {
+    const toggleVip = async () => {
         if (!auth.currentUser) return;
         const newAccess = user.accessState === 'beta-vip' ? 'free' as const : 'beta-vip' as const;
         const updatedUser = { ...user, accessState: newAccess };
@@ -53,12 +53,12 @@ export default function DevPanel({
 
                 <div className="space-y-4">
                     <button 
-                        onClick={togglePro}
+                        onClick={toggleVip}
                         className="w-full p-4 rounded-xl border flex items-center justify-between transition-colors bg-white/[0.06] border-neutral-700"
                     >
                         <div className="flex items-center gap-3">
                             <ShieldAlert size={20} className={user.accessState === 'beta-vip' ? 'text-[#D4FF00]' : 'text-neutral-500'} />
-                            <span className="font-medium text-white">Pro Status</span>
+                            <span className="font-medium text-white">VIP Status</span>
                         </div>
                         <span className="text-xs font-mono bg-black px-2 py-1 rounded text-neutral-400">
                             {user.accessState}

@@ -12,6 +12,12 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
   const [goal, setGoal] = useState<Goal>('maintain');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const handleBack = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    if (step > 1) setStep(step - 1);
+  };
+
   const handleNext = async () => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
@@ -22,7 +28,15 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
       setIsAnalyzing(true);
       // Simulate brief analysis for UX, but rely on WorkoutLogger for actual AI generation
       setTimeout(() => {
-         const profile = { weight, height, age, gender, activityLevel: activity, goal, accessState: 'free' as AccessState };
+         const profile = { 
+            weight: Math.max(35, Math.min(250, Number(weight) || 75)), 
+            height: Math.max(120, Math.min(230, Number(height) || 178)), 
+            age: Math.max(14, Math.min(100, Number(age) || 25)), 
+            gender, 
+            activityLevel: activity, 
+            goal, 
+            accessState: 'free' as AccessState 
+         };
          onComplete(profile);
       }, 1500);
     }
@@ -125,12 +139,24 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
           )}
         </div>
 
-        <button 
-          onClick={handleNext}
-          className="mt-10 w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
-        >
-          {step < 3 ? 'Далее' : 'Создать программу'}
-        </button>
+        <div className="flex items-center gap-3 mt-8">
+          {step > 1 && (
+            <button 
+              type="button"
+              onClick={handleBack}
+              className="py-4 px-5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-neutral-300 font-bold text-sm active:scale-95 transition-all"
+            >
+              ← Назад
+            </button>
+          )}
+          <button 
+            type="button"
+            onClick={handleNext}
+            className="flex-1 bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
+          >
+            {step < 3 ? 'Далее' : 'Создать программу'}
+          </button>
+        </div>
         
         <div className="flex justify-center gap-2 mt-8">
           {[1, 2, 3].map(s => (
