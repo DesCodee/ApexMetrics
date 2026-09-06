@@ -345,7 +345,7 @@ export default function Home({ user, tgUser, onNavigate }: { user: UserProfile, 
 
       {/* VIP Status Banner */}
       <div 
-        id="home-pro-upgrade-banner"
+        id="home-vip-upgrade-banner"
         onClick={() => onNavigate?.('pro')}
         className={`bg-gradient-to-r ${user.accessState === 'beta-vip' ? 'from-purple-500/15 via-[#D4FF00]/10 to-black border-purple-500/30' : 'from-[#D4FF00]/10 to-black border-[#D4FF00]/20'} border rounded-2xl p-4 flex justify-between items-center mt-6 cursor-pointer active:scale-[0.98] transition-transform`}
       >

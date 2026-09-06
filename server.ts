@@ -78,8 +78,12 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
       }
     });
 
-    const resultText = response.text || "[]";
-    const workouts = JSON.parse(resultText);
+    let resultText = (response.text || "[]").trim();
+    if (resultText.startsWith("```")) {
+      resultText = resultText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+    const parsed = JSON.parse(resultText);
+    const workouts = Array.isArray(parsed) ? parsed : (parsed.workouts || []);
 
     res.json({ workouts });
   } catch (error) {

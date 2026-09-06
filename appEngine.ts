@@ -146,13 +146,13 @@ export const ApexEngine = {
             very_active: 1.9
         };
 
-        let tdee = bmr * activityMultipliers[activityLevel];
+        let tdee = bmr * (activityMultipliers[activityLevel] || 1.375);
 
         // 3. Apply Goal Adjustments
         if (goal === 'cut') tdee -= 500;
         if (goal === 'bulk') tdee += 500;
 
-        const calories = Math.round(tdee);
+        const calories = Math.round(tdee) || 2000;
 
         // 4. Calculate Macros
         // Protein: ~2.2g per kg of bodyweight
@@ -242,7 +242,7 @@ export const ApexEngine = {
         const adaptedExercises = workout.exercises.map((ex: any) => {
             const sub = substitutions[ex.name];
             const newName = sub ? sub.name : ex.name;
-            const setsCount = typeof ex.sets === 'number' ? Math.max(2, ex.sets - 1) : 2;
+            const setsCount = typeof ex.sets === 'number' ? Math.max(2, ex.sets - 1) : (Array.isArray(ex.sets) ? Math.max(2, ex.sets.length - 1) : 2);
 
             return {
                 ...ex,

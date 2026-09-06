@@ -94,6 +94,13 @@ export default function App() {
     }
   };
 
+  const handleProfileUpdate = (data: UserProfile | null) => {
+    setUser(data);
+    if (!data) {
+      setActiveTab('home');
+    }
+  };
+
   const handleDevClick = () => {
       const newClicks = devClicks + 1;
       setDevClicks(newClicks);
@@ -156,7 +163,7 @@ export default function App() {
               {activeTab === 'home' && <Home user={user} tgUser={tgUser} onNavigate={setActiveTab} />}
               {activeTab === 'log' && <Log user={user} />}
               {activeTab === 'body' && <Body user={user} onNavigate={setActiveTab} onUpdateUser={setUser} />}
-              {activeTab === 'pro' && <Pro user={user} onUpdate={handleCompleteOnboarding} />}
+              {activeTab === 'pro' && <Pro user={user} onUpdate={handleProfileUpdate} />}
             </motion.div>
           </AnimatePresence>
         </div>

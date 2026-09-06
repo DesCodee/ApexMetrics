@@ -22,9 +22,9 @@ export default function Body({
   const weight = user.weight;
   const heightM = user.height / 100;
   const bmi = (weight / (heightM * heightM)).toFixed(1);
-  const isPro = user.accessState === 'beta-vip';
+  const isVip = user.accessState === 'beta-vip';
 
-  // Pro estimated metrics based on biometric parameters
+  // Advanced estimated metrics based on biometric parameters
   const estBodyFat = user.gender === 'M' 
     ? Math.max(8, Math.min(32, Math.round(1.2 * Number(bmi) + 0.23 * user.age - 16.2)))
     : Math.max(14, Math.min(40, Math.round(1.2 * Number(bmi) + 0.23 * user.age - 5.4)));
@@ -177,45 +177,45 @@ export default function Body({
        <div className="bg-white/[0.03] backdrop-blur-2xl/50 border border-neutral-800 rounded-2xl p-4 relative overflow-hidden">
           <div className="flex justify-between items-center mb-4">
               <div className="text-[10px] text-white font-bold uppercase tracking-widest">
-                {isPro ? 'Продвинутые метрики (Apex Pro)' : 'Продвинутые метрики'}
+                {isVip ? 'Продвинутые биометрики (VIP)' : 'Продвинутые биометрики'}
               </div>
-              {isPro ? (
+              {isVip ? (
                 <CheckCircle2 size={14} className="text-[#D4FF00]" />
               ) : (
                 <Lock size={12} className="text-neutral-500" />
               )}
           </div>
           
-          <div className={`space-y-4 ${isPro ? '' : 'opacity-30 blur-[1px] pointer-events-none pb-12'}`}>
+          <div className={`space-y-4 ${isVip ? '' : 'opacity-30 blur-[1px] pointer-events-none pb-12'}`}>
              <div className="flex justify-between items-center">
                 <div className="text-sm text-neutral-400">Мышечная масса</div>
-                <div className="text-sm text-white font-bold">{isPro ? `${muscleMass} кг` : '-- кг'}</div>
+                <div className="text-sm text-white font-bold">{isVip ? `${muscleMass} кг` : '-- кг'}</div>
              </div>
              <div className="flex justify-between items-center">
                 <div className="text-sm text-neutral-400">Процент жира</div>
-                <div className="text-sm text-white font-bold">{isPro ? `~${estBodyFat}%` : '-- %'}</div>
+                <div className="text-sm text-white font-bold">{isVip ? `~${estBodyFat}%` : '-- %'}</div>
              </div>
              <div className="flex justify-between items-center">
                 <div className="text-sm text-neutral-400">Костная масса</div>
-                <div className="text-sm text-white font-bold">{isPro ? `${boneDensity} кг` : '-- кг'}</div>
+                <div className="text-sm text-white font-bold">{isVip ? `${boneDensity} кг` : '-- кг'}</div>
              </div>
              <div className="flex justify-between items-center">
                 <div className="text-sm text-neutral-400">Метаболический возраст</div>
-                <div className="text-sm text-white font-bold">{isPro ? `${metabolicAge} лет` : '-- лет'}</div>
+                <div className="text-sm text-white font-bold">{isVip ? `${metabolicAge} лет` : '-- лет'}</div>
              </div>
           </div>
 
-          {!isPro && (
+          {!isVip && (
             <div className="absolute bottom-4 left-4 right-4">
                 <button 
-                  id="body-unlock-pro-btn"
+                  id="body-unlock-vip-btn"
                   onClick={() => {
                     tgHaptic('medium');
                     onNavigate?.('pro');
                   }}
                   className="w-full bg-white/[0.06]/80 backdrop-blur-md border border-[#D4FF00]/20 text-[#D4FF00] font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-xl active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                   <Crown size={16} /> Открыть с Apex Pro
+                   <Crown size={16} /> Активировать в разделе VIP
                 </button>
             </div>
           )}

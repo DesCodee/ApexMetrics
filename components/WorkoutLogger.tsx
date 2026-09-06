@@ -244,7 +244,16 @@ export default function Workouts({ user }: { user: UserProfile }) {
     triggerHaptic();
     const initialData: any = {};
     activeSession.exercises?.forEach((ex: any, i: number) => {
-      initialData[i] = Array.from({ length: typeof ex.sets === 'number' ? ex.sets : 3 }).map(() => ({ weight: '', reps: '', rpe: ex.rpe || 8 }));
+      const setsCount = typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3);
+      initialData[i] = Array.from({ length: setsCount }).map((_, sIdx) => {
+        const prevWeight = Array.isArray(ex.sets) && ex.sets[sIdx]?.weight !== undefined ? String(ex.sets[sIdx].weight) : '';
+        const prevReps = Array.isArray(ex.sets) && ex.sets[sIdx]?.reps !== undefined ? String(ex.sets[sIdx].reps) : (typeof ex.reps === 'number' ? String(ex.reps) : '');
+        return { 
+          weight: prevWeight, 
+          reps: prevReps, 
+          rpe: Array.isArray(ex.sets) && ex.sets[sIdx]?.rpe ? ex.sets[sIdx].rpe : (ex.rpe || 8) 
+        };
+      });
     });
     setSessionData(initialData);
     setViewState('logging');
@@ -322,10 +331,12 @@ export default function Workouts({ user }: { user: UserProfile }) {
     try {
       const mappedExercises = activeSession.exercises.map((ex: any, i: number) => ({
           name: ex.name,
+          reps: ex.reps || '10',
+          rpe: ex.rpe || 8,
           sets: sessionData[i].map((s: any) => ({
             weight: Number(s.weight) || 0,
             reps: Number(s.reps) || 0,
-            rpe: Number(s.rpe) || ex.rpe
+            rpe: Number(s.rpe) || ex.rpe || 8
           }))
       }));
 
@@ -574,8 +585,8 @@ export default function Workouts({ user }: { user: UserProfile }) {
             <div key={i} className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
               <div className="font-semibold text-sm text-white mb-1">{ex.name}</div>
               <div className="text-xs text-neutral-500 mb-4 flex justify-between">
-                 <span>{ex.sets}х{ex.reps}</span>
-                 <span className="text-[#D4FF00]">RPE {ex.rpe}</span>
+                 <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)}х{typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
+                 <span className="text-[#D4FF00]">RPE {ex.rpe || 8}</span>
               </div>
               
               <div className="space-y-3">
