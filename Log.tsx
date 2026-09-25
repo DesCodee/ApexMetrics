@@ -90,138 +90,137 @@ export default function Log({ user }: { user: UserProfile }) {
   const calPercent = Math.min(currentCalories / (macros.calories || 2000), 1) * 100;
 
   return (
-    <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
+    <div className="px-6 py-6 space-y-6 animate-in fade-in duration-300 max-w-md mx-auto pb-28">
        <header className="pt-2">
-         <h1 className="text-xl font-bold tracking-tight text-white font-sans">Быстрый лог</h1>
+         <h1 className="text-2xl font-light tracking-tight text-white font-sans">Быстрый лог</h1>
        </header>
 
-       {/* Main Actions (Featured Cards) */}
+       {/* Main Actions */}
        <div className="grid grid-cols-2 gap-3">
           <div 
-             className="bg-neutral-900/90 border border-[#D4FF00]/40 rounded-2xl p-4 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all cursor-pointer hover:border-[#D4FF00] shadow-[0_0_24px_rgba(212,255,0,0.08)]"
+             className="bg-white/[0.02] hover:bg-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all cursor-pointer"
              onClick={() => { triggerHaptic(); setActiveView('workout'); }}
           >
-             <div className="w-12 h-12 rounded-xl bg-[#D4FF00]/15 flex items-center justify-center text-[#D4FF00]">
-                <Dumbbell size={24} />
-             </div>
-             <span className="text-xs font-bold text-white uppercase tracking-wider">Тренировка</span>
+             <Dumbbell size={22} strokeWidth={1.5} className="text-neutral-300" />
+             <span className="text-xs font-normal text-neutral-300 uppercase tracking-wider">Тренировка</span>
           </div>
           <div 
-             className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all hover:border-purple-500/40 cursor-pointer"
+             className="bg-white/[0.02] hover:bg-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center gap-2.5 active:scale-95 transition-all cursor-pointer"
              onClick={() => { triggerHaptic(); setShowCnsModal(true); }}
           >
-             <div className="w-12 h-12 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400">
-                <Brain size={24} />
-             </div>
-             <span className="text-xs font-bold text-white uppercase tracking-wider">ЦНС Check</span>
+             <Brain size={22} strokeWidth={1.5} className="text-neutral-300" />
+             <span className="text-xs font-normal text-neutral-300 uppercase tracking-wider">ЦНС Check</span>
           </div>
        </div>
 
-       {/* Water Tracker (Standard Card) */}
-       <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4">
-          <div className="flex justify-between items-center mb-3">
-             <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                <Droplet size={16} className="text-blue-400" /> Водный баланс
+       {/* Water Tracker */}
+       <div className="bg-white/[0.02] rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-4">
+             <div className="flex items-center gap-2 text-white font-normal text-sm">
+                <Droplet size={15} strokeWidth={1.5} className="text-neutral-400" /> Водный баланс
              </div>
-             <div className="text-xs text-neutral-300 font-semibold tracking-wider uppercase tabular-nums">
+             <div className="text-xs text-neutral-400 font-normal tracking-wider uppercase tabular-nums">
                 {(waterGlasses * 0.25).toFixed(2)} Л / 3.00 Л
              </div>
           </div>
           <div className="flex items-center justify-between gap-3">
              <button 
                type="button"
-               className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-neutral-300 active:scale-95 transition-all hover:bg-white/[0.1]"
+               className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-neutral-400 hover:text-white active:scale-95 transition-all"
                onClick={() => { triggerHaptic(); updateWater(Math.max(0, waterGlasses - 1)); }}
                title="Уменьшить"
              >
-                <Minus size={15} />
+                <Minus size={15} strokeWidth={1.5} />
              </button>
              
              <div className="flex-1 flex gap-1.5 justify-center">
                 {Array.from({ length: maxGlasses }).map((_, i) => (
                    <div 
                      key={i} 
-                     className={`w-3.5 h-7 rounded-xl transition-colors duration-300 ${i < waterGlasses ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'bg-neutral-900 border border-neutral-800'}`} 
+                     className={`w-2.5 h-6 rounded-full transition-colors duration-300 ${i < waterGlasses ? 'bg-white' : 'bg-neutral-800'}`} 
                    />
                 ))}
              </div>
              
              <button 
                type="button"
-               className="w-10 h-10 rounded-xl bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold flex items-center justify-center active:scale-95 transition-all shadow-[0_0_15px_rgba(212,255,0,0.2)]"
+               className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center text-neutral-400 hover:text-white active:scale-95 transition-all"
                onClick={() => { triggerHaptic(); updateWater(Math.min(maxGlasses, waterGlasses + 1)); }}
                title="Увеличить"
              >
-                <Plus size={15} />
+                <Plus size={15} strokeWidth={1.5} />
              </button>
           </div>
        </div>
 
-       {/* Daily Manual Stats Form (Standard Card) */}
-       <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 space-y-3.5">
+       {/* Daily Manual Stats Form */}
+       <div className="bg-white/[0.02] rounded-2xl p-6 space-y-5">
           <div className="flex justify-between items-center">
-             <div className="text-sm font-semibold text-white">Дневные показатели</div>
-             <div className="text-xs font-bold text-[#D4FF00] tabular-nums">{currentCalories} <span className="text-neutral-400 font-normal">ккал</span></div>
+             <div className="text-sm font-normal text-white">Дневные показатели</div>
+             <div className="text-xs font-normal text-neutral-400 tabular-nums">{currentCalories} ккал</div>
           </div>
           
-          <div className="w-full h-1.5 bg-neutral-900 rounded-xl overflow-hidden mb-2">
-             <div className="h-full bg-[#D4FF00] transition-all duration-500" style={{ width: `${calPercent}%` }} />
+          <div className="w-full h-[2px] bg-neutral-900 rounded-full overflow-hidden">
+             <div className="h-full bg-neutral-400 transition-all duration-500" style={{ width: `${calPercent}%` }} />
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
              <div>
-                <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1.5 block">Белки (г)</label>
+                <label className="text-xs font-normal text-neutral-400 uppercase tracking-wider mb-1.5 block">Белки (г)</label>
                 <input 
                   type="text" 
                   inputMode="decimal"
                   value={protein} 
                   onChange={(e) => setProtein(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-neutral-900/90 border border-neutral-800 rounded-xl py-2 px-2 text-center text-white outline-none focus:border-[#D4FF00] font-bold transition-colors" 
+                  className="w-full bg-neutral-900/60 border-0 rounded-xl py-2 px-2 text-center text-white outline-none focus:ring-1 focus:ring-neutral-700 font-normal transition-colors" 
                 />
              </div>
              <div>
-                <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1.5 block">Жиры (г)</label>
+                <label className="text-xs font-normal text-neutral-400 uppercase tracking-wider mb-1.5 block">Жиры (г)</label>
                 <input 
                   type="text" 
                   inputMode="decimal"
                   value={fats} 
                   onChange={(e) => setFats(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-neutral-900/90 border border-neutral-800 rounded-xl py-2 px-2 text-center text-white outline-none focus:border-[#D4FF00] font-bold transition-colors" 
+                  className="w-full bg-neutral-900/60 border-0 rounded-xl py-2 px-2 text-center text-white outline-none focus:ring-1 focus:ring-neutral-700 font-normal transition-colors" 
                 />
              </div>
              <div>
-                <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1.5 block">Углеводы (г)</label>
+                <label className="text-xs font-normal text-neutral-400 uppercase tracking-wider mb-1.5 block">Углеводы (г)</label>
                 <input 
                   type="text" 
                   inputMode="decimal"
                   value={carbs} 
                   onChange={(e) => setCarbs(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-neutral-900/90 border border-neutral-800 rounded-xl py-2 px-2 text-center text-white outline-none focus:border-[#D4FF00] font-bold transition-colors" 
+                  className="w-full bg-neutral-900/60 border-0 rounded-xl py-2 px-2 text-center text-white outline-none focus:ring-1 focus:ring-neutral-700 font-normal transition-colors" 
                 />
              </div>
           </div>
 
           <div>
-             <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Activity size={14}/> Шаги за день</label>
+             <label className="text-xs font-normal text-neutral-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+               <Activity size={14} strokeWidth={1.5} /> Шаги за день
+             </label>
              <input 
                type="text" 
                inputMode="numeric"
                value={steps} 
                onChange={(e) => setSteps(e.target.value)}
                placeholder="10000"
-               className="w-full bg-neutral-900/90 border border-neutral-800 rounded-xl py-2.5 px-3 text-center text-white text-base font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+               className="w-full bg-neutral-900/60 border-0 rounded-xl py-2.5 px-3 text-center text-white text-base font-normal outline-none focus:ring-1 focus:ring-neutral-700 transition-colors" 
              />
           </div>
 
+          {/* Primary Action Button */}
           <button 
              id="save-daily-stats-btn"
              onClick={handleSaveStats}
              disabled={isSavingStats}
-             className={`w-full font-extrabold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
-                savedSuccess ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-[#D4FF00] hover:bg-[#c4ed00] text-black shadow-[0_0_20px_rgba(212,255,0,0.25)]'
+             className={`w-full font-medium text-sm py-4 px-4 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+                savedSuccess ? 'bg-emerald-500 text-black' : 'bg-[#D4FF00] hover:bg-[#c4ed00] text-black'
              } disabled:opacity-50`}
           >
              {isSavingStats ? (

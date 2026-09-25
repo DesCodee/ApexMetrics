@@ -77,64 +77,58 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
   ];
 
   return (
-    <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
+    <div className="px-6 py-6 space-y-6 animate-in fade-in duration-300 max-w-md mx-auto pb-28">
        
        <header className="flex justify-between items-center pt-2">
           <div className="flex items-center gap-2">
-             <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Раздел VIP</span>
-             <span className="text-xs font-bold px-2 py-0.5 rounded-xl bg-[#D4FF00]/10 text-[#D4FF00] border border-[#D4FF00]/20 uppercase tracking-wider">
-                В разработке
+             <span className="text-xs text-neutral-400 font-normal uppercase tracking-wider">Раздел VIP</span>
+             <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-white/[0.04] text-neutral-400 uppercase tracking-wider">
+                Бета
              </span>
           </div>
           <button 
             type="button"
             onClick={handleLogout} 
-            className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-red-500/10 hover:border-red-500/30 flex items-center gap-1.5 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all"
+            className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-red-500/10 hover:text-red-400 flex items-center gap-1.5 text-neutral-400 text-xs font-normal transition-all"
             title="Сбросить профиль"
           >
-             <LogOut size={13} />
-             <span className="text-xs font-semibold uppercase tracking-wider">Сброс</span>
+             <LogOut size={13} strokeWidth={1.5} />
+             <span className="uppercase tracking-wider">Сброс</span>
           </button>
        </header>
 
-       {/* Hero Banner */}
-       <div className="flex flex-col items-center text-center mt-1">
-          <div className="w-14 h-14 rounded-2xl bg-[#D4FF00]/10 border border-[#D4FF00]/20 flex items-center justify-center mb-3 text-[#D4FF00] relative shadow-[0_0_25px_rgba(212,255,0,0.15)]">
-             <Crown size={28} />
-             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-black border border-[#D4FF00] flex items-center justify-center text-[#D4FF00]">
-                <Sparkles size={11} />
-             </div>
-          </div>
-          
-          <h1 className="text-2xl font-bold tracking-tight text-white mb-1.5">Apex VIP</h1>
-          <p className="text-neutral-300 text-sm max-w-xs leading-relaxed">
+       {/* Hero */}
+       <div className="flex flex-col items-center text-center mt-2">
+          <Crown size={32} strokeWidth={1.5} className="text-white mb-3" />
+          <h1 className="text-2xl font-light tracking-tight text-white mb-1.5 font-sans">Apex VIP</h1>
+          <p className="text-neutral-400 text-xs font-normal max-w-xs leading-relaxed">
              Закрытый модуль продвинутого анализа тренировок, искусственного интеллекта и биометрии
           </p>
        </div>
 
        {/* Status Card */}
        {isVip ? (
-          <div className="bg-gradient-to-br from-purple-500/15 via-[#D4FF00]/10 to-transparent border border-[#D4FF00]/40 rounded-2xl p-4 text-center space-y-3 shadow-[0_0_24px_rgba(212,255,0,0.06)]">
-             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#D4FF00] bg-black/60 px-3 py-1 rounded-xl border border-[#D4FF00]/30">
-                <CheckCircle2 size={14} /> Ранний доступ активен
+          <div className="bg-white/[0.02] border border-[#D4FF00]/30 rounded-2xl p-6 text-center space-y-3">
+             <div className="inline-flex items-center gap-1.5 text-xs font-normal text-[#D4FF00] uppercase tracking-wider">
+                <CheckCircle2 size={14} strokeWidth={1.5} /> Ранний доступ активен
              </div>
-             <div className="text-white font-bold text-base">Вы участник закрытого тестирования</div>
-             <p className="text-xs text-neutral-300 leading-relaxed">
+             <div className="text-white font-normal text-base">Вы участник закрытого тестирования</div>
+             <p className="text-xs text-neutral-400 leading-relaxed font-normal">
                 Вам открыты расширенные биометрики тела (состав тканей, костная масса, метаболический возраст) и приоритетный доступ ко всем новым AI-функциям.
              </p>
           </div>
        ) : (
-          <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 space-y-3.5">
+          <div className="bg-white/[0.02] rounded-2xl p-6 space-y-5">
              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-white uppercase tracking-wider">
-                   <Clock size={14} className="text-[#D4FF00]" /> Статус разработки
+                <div className="flex items-center gap-2 text-xs font-normal text-white uppercase tracking-wider">
+                   <Clock size={14} strokeWidth={1.5} className="text-neutral-400" /> Статус разработки
                 </div>
-                <span className="text-xs font-bold text-[#D4FF00] bg-[#D4FF00]/10 border border-[#D4FF00]/20 px-2 py-0.5 rounded-xl">
+                <span className="text-xs font-normal text-neutral-400 bg-white/[0.04] px-2.5 py-0.5 rounded-full">
                    v2.0 Beta
                 </span>
              </div>
              
-             <p className="text-xs text-neutral-300 leading-relaxed">
+             <p className="text-xs text-neutral-400 leading-relaxed font-normal">
                 Мы готовим крупное обновление экосистемы Apex. На время закрытого тестирования ранний доступ открыт для всех желающих без ограничений.
              </p>
 
@@ -142,12 +136,12 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
                 type="button"
                 onClick={handleActivateBetaVip}
                 disabled={isActivating}
-                className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(212,255,0,0.2)] flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-medium text-sm py-4 px-4 rounded-xl uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-none"
              >
-                <Crown size={16} />
+                <Crown size={16} strokeWidth={1.5} />
                 {isActivating ? "Активация..." : "Активировать ранний доступ"}
              </button>
-             <div className="text-xs text-neutral-400 text-center font-medium">
+             <div className="text-xs text-neutral-500 text-center font-normal">
                 Доступ открывается бесплатно для участников закрытого бета-теста
              </div>
           </div>
@@ -155,7 +149,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
 
        {/* Roadmap of features in development */}
        <div className="space-y-3">
-          <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider px-1">
+          <div className="text-xs text-neutral-400 font-normal uppercase tracking-wider px-1">
              Что создаётся прямо сейчас
           </div>
 
@@ -164,23 +158,17 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
              return (
                 <div 
                    key={i} 
-                   className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex gap-3.5 items-start"
+                   className="bg-white/[0.02] rounded-2xl p-5 flex gap-4 items-start"
                 >
-                   <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#D4FF00] shrink-0 mt-0.5">
-                      <Icon size={18} />
-                   </div>
+                   <Icon size={18} strokeWidth={1.5} className="text-neutral-400 shrink-0 mt-0.5" />
                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                         <h4 className="text-white text-sm font-semibold truncate">{item.title}</h4>
-                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-xl shrink-0 ${
-                            item.tag === 'Тестирование' 
-                               ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
-                               : 'bg-white/[0.06] text-neutral-300 border border-white/[0.08]'
-                         }`}>
+                         <h4 className="text-white text-sm font-normal truncate">{item.title}</h4>
+                         <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-white/[0.04] text-neutral-400 shrink-0">
                             {item.tag}
                          </span>
                       </div>
-                      <p className="text-xs text-neutral-300 leading-relaxed">{item.desc}</p>
+                      <p className="text-xs text-neutral-400 leading-relaxed font-normal">{item.desc}</p>
                    </div>
                 </div>
              );
@@ -188,9 +176,9 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        </div>
 
        {/* Feedback suggestion */}
-       <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 text-center space-y-2">
-          <div className="text-xs font-semibold text-white">Есть идея для полезной фичи?</div>
-          <p className="text-xs text-neutral-400 leading-relaxed">
+       <div className="bg-white/[0.02] rounded-2xl p-5 text-center space-y-2">
+          <div className="text-xs font-normal text-white">Есть идея для полезной фичи?</div>
+          <p className="text-xs text-neutral-400 leading-relaxed font-normal">
              Мы строим персональный интеллект для атлетов на основе реального опыта тренировок. Все пожелания учитываются в релизе.
           </p>
        </div>

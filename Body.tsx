@@ -82,15 +82,15 @@ export default function Body({
   };
 
   return (
-    <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
+    <div className="px-6 py-6 space-y-6 animate-in fade-in duration-300 max-w-md mx-auto pb-28">
        <header className="pt-2">
-         <h1 className="text-xl font-bold tracking-tight text-white font-sans">Параметры тела</h1>
+         <h1 className="text-2xl font-light tracking-tight text-white font-sans">Параметры тела</h1>
        </header>
 
        {/* Top Metrics */}
-       <div className="grid grid-cols-2 gap-3">
-          <div id="body-weight-card" className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex flex-col justify-between">
-             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">
+       <div className="grid grid-cols-2 gap-4">
+          <div id="body-weight-card" className="bg-white/[0.02] rounded-2xl p-6 flex flex-col justify-between">
+             <div className="flex items-center justify-between text-xs font-normal uppercase tracking-wider text-neutral-400 mb-3">
                 <span>Ваш Вес</span>
                 <button 
                   type="button"
@@ -99,70 +99,70 @@ export default function Body({
                     setWeightInput(String(weight));
                     setIsEditingWeight(!isEditingWeight);
                   }}
-                  className="text-[#D4FF00] hover:text-white transition-colors p-1"
+                  className="text-neutral-400 hover:text-white transition-colors p-1"
                   title="Изменить вес"
                 >
-                  <Edit3 size={14} />
+                  <Edit3 size={14} strokeWidth={1.5} />
                 </button>
              </div>
              
              {isEditingWeight ? (
-                <div className="space-y-2 mt-1">
+                <div className="space-y-3 mt-1">
                    <div className="flex items-center gap-1.5">
                       <input 
                         type="text" 
                         inputMode="decimal"
                         value={weightInput}
                         onChange={(e) => setWeightInput(e.target.value)}
-                        className="w-full bg-neutral-900 border border-[#D4FF00] rounded-xl px-2 py-1.5 text-white font-bold text-lg outline-none text-center"
+                        className="w-full bg-neutral-900 border-0 rounded-xl px-2 py-2 text-white font-light text-xl outline-none text-center focus:ring-1 focus:ring-neutral-700"
                         autoFocus
                       />
-                      <span className="text-xs text-neutral-400">кг</span>
+                      <span className="text-xs text-neutral-400 font-normal">кг</span>
                    </div>
-                   <div className="flex gap-1.5">
+                   <div className="flex gap-2">
                       <button 
                         type="button"
                         onClick={handleSaveWeight}
                         disabled={isSavingWeight}
-                        className="flex-1 bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                        className="flex-1 bg-white hover:bg-neutral-200 text-black text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1 active:scale-95 transition-transform"
                       >
-                         <Save size={12} /> Сохранить
+                         <Save size={12} strokeWidth={1.5} /> Сохранить
                       </button>
                       <button 
                         type="button"
                         onClick={() => setIsEditingWeight(false)}
                         className="p-2 bg-white/[0.06] text-neutral-400 hover:text-white rounded-xl"
                       >
-                         <X size={14} />
+                         <X size={14} strokeWidth={1.5} />
                       </button>
                    </div>
                 </div>
              ) : (
                 <div>
-                   <div className="text-white font-extrabold tracking-tight text-3xl tabular-nums">{weight.toFixed(1)} <span className="text-xs text-neutral-400 font-medium">кг</span></div>
-                   <div className="text-xs text-neutral-400 mt-1">Нажмите для изменения</div>
+                   <div className="text-white font-light tracking-tight text-4xl tabular-nums">
+                     {weight.toFixed(1)} <span className="text-xs text-neutral-400 font-normal">кг</span>
+                   </div>
+                   <div className="text-xs text-neutral-400 mt-2 font-normal">Нажмите для изменения</div>
                 </div>
              )}
           </div>
 
-          <div id="body-bmi-card" className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex flex-col justify-between">
-             <div className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">ИМТ (BMI)</div>
+          <div id="body-bmi-card" className="bg-white/[0.02] rounded-2xl p-6 flex flex-col justify-between">
+             <div className="text-xs font-normal uppercase tracking-wider text-neutral-400 mb-3">ИМТ (BMI)</div>
              <div>
-                <div className="text-white font-extrabold tracking-tight text-3xl tabular-nums">{bmi}</div>
-                <div className={`inline-block text-xs font-bold px-2 py-0.5 rounded-xl border mt-1.5 uppercase tracking-wider ${bmiStatus.color}`}>
+                <div className="text-white font-light tracking-tight text-4xl tabular-nums">{bmi}</div>
+                <div className="inline-block text-xs font-normal px-2.5 py-0.5 rounded-full bg-white/[0.04] text-neutral-300 mt-2 uppercase tracking-wider">
                   {bmiStatus.label}
                 </div>
              </div>
           </div>
        </div>
 
-       {/* Smart Scale Sync CTA (Standard Card) */}
-       <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex flex-col items-center text-center">
-          <div className="w-12 h-12 bg-white/[0.05] border border-white/[0.08] rounded-xl flex items-center justify-center mb-3">
-             <Bluetooth size={22} className={syncStatus === 'synced' ? 'text-emerald-400' : 'text-[#D4FF00]'} />
-          </div>
-          <h3 className="text-white font-bold text-sm mb-1">Синхронизация с весами</h3>
-          <p className="text-xs text-neutral-300 mb-4 px-2 leading-relaxed">
+       {/* Smart Scale Sync CTA */}
+       <div className="bg-white/[0.02] rounded-2xl p-6 flex flex-col items-center text-center">
+          <Bluetooth size={22} strokeWidth={1.5} className="text-neutral-400 mb-3" />
+          <h3 className="text-white font-normal text-sm mb-1">Синхронизация с весами</h3>
+          <p className="text-xs text-neutral-400 mb-6 px-2 leading-relaxed font-normal">
             {syncStatus === 'synced' 
               ? 'Устройство синхронизировано (Apple Health / Garmin). Данные обновлены!' 
               : 'Подключите умные весы (Garmin, Xiaomi, Apple Health) для автоматического расчета состава тела.'}
@@ -171,90 +171,88 @@ export default function Body({
             id="body-connect-scale-btn"
             onClick={handleConnectScale}
             disabled={syncStatus === 'syncing'}
-            className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-sm font-extrabold py-3.5 px-4 rounded-xl uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,255,0,0.25)] cursor-pointer"
+            className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-sm font-medium py-3.5 px-4 rounded-xl uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-none"
           >
              {syncStatus === 'syncing' ? (
                'Синхронизация...'
              ) : syncStatus === 'synced' ? (
-               <><Check size={16} /> Подключено</>
+               <><Check size={16} strokeWidth={1.5} /> Подключено</>
              ) : (
                'Подключить устройство'
              )}
           </button>
        </div>
 
-       {/* Advanced Biometrics 2x2 Grid with Graphic Richness */}
-       <div className={`backdrop-blur-xl border rounded-2xl p-4 relative overflow-hidden ${
-          isVip ? 'bg-neutral-900/90 border-[#D4FF00]/40 shadow-[0_0_24px_rgba(212,255,0,0.08)]' : 'bg-neutral-900/60 border-neutral-800'
-       }`}>
+       {/* Advanced Biometrics 2x2 Grid */}
+       <div className="bg-white/[0.02] rounded-2xl p-6 relative overflow-hidden">
           <div className="flex justify-between items-center mb-4">
-              <div className="text-xs text-white font-semibold uppercase tracking-wider">
+              <div className="text-xs text-neutral-300 font-normal uppercase tracking-wider">
                 {isVip ? 'Продвинутая биометрия (VIP)' : 'Продвинутая биометрия'}
               </div>
               {isVip ? (
-                <CheckCircle2 size={16} className="text-emerald-400" />
+                <CheckCircle2 size={16} strokeWidth={1.5} className="text-emerald-400" />
               ) : (
-                <Lock size={14} className="text-neutral-400" />
+                <Lock size={14} strokeWidth={1.5} className="text-neutral-400" />
               )}
           </div>
           
           <div className={`grid grid-cols-2 gap-3 ${isVip ? '' : 'opacity-25 blur-[1px] pointer-events-none pb-12'}`}>
-             <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                   <Dumbbell size={14} className="text-[#D4FF00]" />
-                   <span className="text-xs uppercase font-semibold tracking-wider">Мышцы</span>
+             <div className="bg-neutral-900/60 rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                   <Dumbbell size={14} strokeWidth={1.5} />
+                   <span className="text-xs uppercase font-normal tracking-wider">Мышцы</span>
                 </div>
-                <div className="mt-2">
-                   <div className="text-white font-bold text-xl tabular-nums">{isVip ? `${muscleMass} кг` : '-- кг'}</div>
-                   <div className="text-xs text-neutral-400 mt-0.5">Сухая масса</div>
-                </div>
-             </div>
-
-             <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                   <Flame size={14} className="text-amber-400" />
-                   <span className="text-xs uppercase font-semibold tracking-wider">Жир</span>
-                </div>
-                <div className="mt-2">
-                   <div className="text-white font-bold text-xl tabular-nums">{isVip ? `~${estBodyFat}%` : '-- %'}</div>
-                   <div className="text-xs text-neutral-400 mt-0.5">Процент жира</div>
+                <div className="mt-3">
+                   <div className="text-white font-light text-2xl tabular-nums">{isVip ? `${muscleMass} кг` : '-- кг'}</div>
+                   <div className="text-xs text-neutral-400 mt-1 font-normal">Сухая масса</div>
                 </div>
              </div>
 
-             <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                   <Shield size={14} className="text-blue-400" />
-                   <span className="text-xs uppercase font-semibold tracking-wider">Кости</span>
+             <div className="bg-neutral-900/60 rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                   <Flame size={14} strokeWidth={1.5} />
+                   <span className="text-xs uppercase font-normal tracking-wider">Жир</span>
                 </div>
-                <div className="mt-2">
-                   <div className="text-white font-bold text-xl tabular-nums">{isVip ? `${boneDensity} кг` : '-- кг'}</div>
-                   <div className="text-xs text-neutral-400 mt-0.5">Костная масса</div>
+                <div className="mt-3">
+                   <div className="text-white font-light text-2xl tabular-nums">{isVip ? `~${estBodyFat}%` : '-- %'}</div>
+                   <div className="text-xs text-neutral-400 mt-1 font-normal">Процент жира</div>
                 </div>
              </div>
 
-             <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                   <Activity size={14} className="text-emerald-400" />
-                   <span className="text-xs uppercase font-semibold tracking-wider">Возраст</span>
+             <div className="bg-neutral-900/60 rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                   <Shield size={14} strokeWidth={1.5} />
+                   <span className="text-xs uppercase font-normal tracking-wider">Кости</span>
                 </div>
-                <div className="mt-2">
-                   <div className="text-white font-bold text-xl tabular-nums">{isVip ? `${metabolicAge} лет` : '-- лет'}</div>
-                   <div className="text-xs text-neutral-400 mt-0.5">Метаболический</div>
+                <div className="mt-3">
+                   <div className="text-white font-light text-2xl tabular-nums">{isVip ? `${boneDensity} кг` : '-- кг'}</div>
+                   <div className="text-xs text-neutral-400 mt-1 font-normal">Костная масса</div>
+                </div>
+             </div>
+
+             <div className="bg-neutral-900/60 rounded-xl p-4 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                   <Activity size={14} strokeWidth={1.5} />
+                   <span className="text-xs uppercase font-normal tracking-wider">Возраст</span>
+                </div>
+                <div className="mt-3">
+                   <div className="text-white font-light text-2xl tabular-nums">{isVip ? `${metabolicAge} лет` : '-- лет'}</div>
+                   <div className="text-xs text-neutral-400 mt-1 font-normal">Метаболический</div>
                 </div>
              </div>
           </div>
 
           {!isVip && (
-            <div className="absolute bottom-4 left-4 right-4">
+            <div className="absolute bottom-6 left-6 right-6">
                 <button 
                   id="body-unlock-vip-btn"
                   onClick={() => {
                     tgHaptic('medium');
                     onNavigate?.('pro');
                   }}
-                  className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm shadow-[0_0_20px_rgba(212,255,0,0.2)] active:scale-[0.98] transition-transform cursor-pointer"
+                  className="w-full bg-white/[0.08] hover:bg-white/[0.12] text-white font-medium py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                   <Crown size={16} /> Активировать в разделе VIP
+                   <Crown size={15} strokeWidth={1.5} /> Активировать в разделе VIP
                 </button>
             </div>
           )}

@@ -151,11 +151,8 @@ export default function App() {
     <ErrorBoundary>
       <div className="h-[100dvh] bg-transparent text-white font-sans flex flex-col relative overflow-hidden">
         
-        {/* Ambient Liquid Background */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-           <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-[#D4FF00]/10 rounded-full mix-blend-screen filter blur-[80px] animate-pulse" style={{ animationDuration: '8s' }} />
-           <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-blue-500/10 rounded-full mix-blend-screen filter blur-[100px] animate-pulse" style={{ animationDuration: '12s' }} />
-        </div>
+        {/* Minimal Matte Background */}
+        <div className="fixed inset-0 bg-black pointer-events-none -z-10" />
         <div className="flex-1 relative">
           <AnimatePresence mode="wait">
             <motion.div

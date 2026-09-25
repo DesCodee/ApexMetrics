@@ -1,5 +1,4 @@
 import { Home, PlusSquare, Activity, Crown } from 'lucide-react';
-import { motion } from 'motion/react';
 
 export default function BottomNav({ active, onChange }: any) {
   const tg = (window as any).Telegram?.WebApp;
@@ -12,8 +11,8 @@ export default function BottomNav({ active, onChange }: any) {
   }
   
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-neutral-950/90 backdrop-blur-2xl border-t border-white/[0.08] pb-safe z-50">
-      <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
+    <div className="fixed bottom-0 left-0 w-full bg-black/95 border-t border-neutral-900 pb-safe z-50">
+      <div className="flex justify-around items-center h-16 max-w-md mx-auto px-4">
         <NavItem id="home" icon={Home} label="Главная" active={active} onClick={() => handleTab('home')} />
         <NavItem id="log" icon={PlusSquare} label="Дневник" active={active} onClick={() => handleTab('log')} />
         <NavItem id="body" icon={Activity} label="Тело" active={active} onClick={() => handleTab('body')} />
@@ -26,16 +25,17 @@ export default function BottomNav({ active, onChange }: any) {
 const NavItem = ({ id, icon: Icon, label, active, onClick }: any) => {
   const isActive = active === id;
   return (
-    <button onClick={onClick} className={`relative flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive ? 'text-black' : 'text-neutral-400 hover:text-neutral-200'} transition-colors`}>
+    <button 
+      onClick={onClick} 
+      className={`relative flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+        isActive ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'
+      }`}
+    >
+      <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+      <span className="text-[10px] font-normal tracking-tight">{label}</span>
       {isActive && (
-        <motion.div 
-          layoutId="nav-pill"
-          className="absolute inset-1 bg-[#D4FF00] rounded-xl -z-10 shadow-[0_0_15px_rgba(212,255,0,0.25)]"
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        />
+        <span className="w-1 h-1 rounded-full bg-[#D4FF00] absolute bottom-1" />
       )}
-      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="z-10 relative" />
-      <span className="text-xs font-semibold tracking-tight z-10 relative">{label}</span>
     </button>
   )
 }
