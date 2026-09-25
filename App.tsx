@@ -11,25 +11,27 @@ import Body from './screens/Body';
 import Pro from './screens/Pro';
 import BottomNav from './components/BottomNav';
 import DevPanel from './components/DevPanel';
-import { auth, initFirebaseUser, loadUserProfile, saveUserProfile } from './firebase';
+import { auth, getStableUserId, initFirebaseUser, loadUserProfile, saveUserProfile } from './firebase';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
-  // Helper to identify user ID synchronously
-  const getStoredUid = () => {
-    try {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initDataUnsafe?.user?.id) return String(tg.initDataUnsafe.user.id);
-    } catch {}
-    return 'dev_athlete_123';
-  };
-
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
-      const uid = getStoredUid();
-      const cached = localStorage.getItem(`apex_profile_${uid}`) || localStorage.getItem('apex_profile_dev_athlete_123') || localStorage.getItem('apex_profile_777000');
-      if (cached) return JSON.parse(cached);
+      const uid = getStableUserId();
+      const userCached = localStorage.getItem(`apex_profile_${uid}`);
+      if (userCached) return JSON.parse(userCached);
+
+      const legacy = localStorage.getItem('apex_profile_dev_athlete_123') || 
+                     localStorage.getItem('apex_profile_777000') || 
+                     localStorage.getItem('apex_profile');
+      if (legacy) {
+        localStorage.setItem(`apex_profile_${uid}`, legacy);
+        localStorage.removeItem('apex_profile_dev_athlete_123');
+        localStorage.removeItem('apex_profile_777000');
+        localStorage.removeItem('apex_profile');
+        return JSON.parse(legacy);
+      }
     } catch {}
     return null;
   });
@@ -40,8 +42,11 @@ export default function App() {
   // If we already have a cached user, we don't block the screen with a spinner!
   const [loadingAuth, setLoadingAuth] = useState(() => {
     try {
-      const uid = getStoredUid();
-      const hasProfile = localStorage.getItem(`apex_profile_${uid}`) || localStorage.getItem('apex_profile_dev_athlete_123') || localStorage.getItem('apex_profile_777000');
+      const uid = getStableUserId();
+      const hasProfile = localStorage.getItem(`apex_profile_${uid}`) || 
+                         localStorage.getItem('apex_profile_dev_athlete_123') || 
+                         localStorage.getItem('apex_profile_777000') ||
+                         localStorage.getItem('apex_profile');
       return !hasProfile;
     } catch {
       return true;
@@ -80,9 +85,10 @@ export default function App() {
   }, []);
 
   const handleCompleteOnboarding = async (data: UserProfile | null) => {
-    if (data && auth.currentUser) {
+    const uid = auth.currentUser?.uid || getStableUserId();
+    if (data && uid) {
       try {
-        await saveUserProfile(data, auth.currentUser.uid);
+        await saveUserProfile(data, uid);
         setUser(data);
         setActiveTab('home');
       } catch (e: any) {

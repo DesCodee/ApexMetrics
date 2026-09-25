@@ -77,59 +77,59 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
   ];
 
   return (
-    <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto pb-24">
+    <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
        
        <header className="flex justify-between items-center pt-2">
           <div className="flex items-center gap-2">
-             <span className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Раздел VIP</span>
-             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#D4FF00]/10 text-[#D4FF00] border border-[#D4FF00]/20 uppercase">
+             <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Раздел VIP</span>
+             <span className="text-xs font-bold px-2 py-0.5 rounded-xl bg-[#D4FF00]/10 text-[#D4FF00] border border-[#D4FF00]/20 uppercase tracking-wider">
                 В разработке
              </span>
           </div>
           <button 
             type="button"
             onClick={handleLogout} 
-            className="px-3 py-1.5 rounded-full bg-white/[0.03] backdrop-blur-2xl flex items-center gap-1.5 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all"
+            className="px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-red-500/10 hover:border-red-500/30 flex items-center gap-1.5 text-neutral-400 hover:text-red-400 border border-neutral-800 active:scale-95 transition-all"
             title="Сбросить профиль"
           >
-             <LogOut size={12} />
-             <span className="text-[10px] font-bold uppercase tracking-widest">Сброс</span>
+             <LogOut size={13} />
+             <span className="text-xs font-semibold uppercase tracking-wider">Сброс</span>
           </button>
        </header>
 
        {/* Hero Banner */}
-       <div className="flex flex-col items-center text-center mt-2">
-          <div className="w-16 h-16 rounded-3xl bg-[#D4FF00]/10 border border-[#D4FF00]/20 flex items-center justify-center mb-4 text-[#D4FF00] relative shadow-[0_0_25px_rgba(212,255,0,0.15)]">
-             <Crown size={32} />
-             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-black border border-[#D4FF00] flex items-center justify-center text-[#D4FF00]">
-                <Sparkles size={12} />
+       <div className="flex flex-col items-center text-center mt-1">
+          <div className="w-14 h-14 rounded-2xl bg-[#D4FF00]/10 border border-[#D4FF00]/20 flex items-center justify-center mb-3 text-[#D4FF00] relative shadow-[0_0_25px_rgba(212,255,0,0.15)]">
+             <Crown size={28} />
+             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-black border border-[#D4FF00] flex items-center justify-center text-[#D4FF00]">
+                <Sparkles size={11} />
              </div>
           </div>
           
-          <h1 className="text-3xl font-serif text-white mb-2">Apex VIP</h1>
-          <p className="text-neutral-400 text-sm max-w-xs leading-relaxed">
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-1.5">Apex VIP</h1>
+          <p className="text-neutral-300 text-sm max-w-xs leading-relaxed">
              Закрытый модуль продвинутого анализа тренировок, искусственного интеллекта и биометрии
           </p>
        </div>
 
        {/* Status Card */}
        {isVip ? (
-          <div className="bg-gradient-to-br from-purple-500/15 via-[#D4FF00]/10 to-transparent border border-[#D4FF00]/30 rounded-2xl p-5 text-center space-y-3 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.2)]">
-             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#D4FF00] bg-black/40 px-3 py-1 rounded-full border border-[#D4FF00]/30">
-                <CheckCircle2 size={13} /> Ранний доступ активен
+          <div className="bg-gradient-to-br from-purple-500/15 via-[#D4FF00]/10 to-transparent border border-[#D4FF00]/40 rounded-2xl p-4 text-center space-y-3 shadow-[0_0_24px_rgba(212,255,0,0.06)]">
+             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#D4FF00] bg-black/60 px-3 py-1 rounded-xl border border-[#D4FF00]/30">
+                <CheckCircle2 size={14} /> Ранний доступ активен
              </div>
              <div className="text-white font-bold text-base">Вы участник закрытого тестирования</div>
-             <p className="text-xs text-neutral-400 leading-relaxed">
+             <p className="text-xs text-neutral-300 leading-relaxed">
                 Вам открыты расширенные биометрики тела (состав тканей, костная масса, метаболический возраст) и приоритетный доступ ко всем новым AI-функциям.
              </p>
           </div>
        ) : (
-          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 space-y-4">
+          <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 space-y-3.5">
              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-xs font-semibold text-white uppercase tracking-wider">
                    <Clock size={14} className="text-[#D4FF00]" /> Статус разработки
                 </div>
-                <span className="text-[11px] font-bold text-[#D4FF00] bg-[#D4FF00]/10 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-bold text-[#D4FF00] bg-[#D4FF00]/10 border border-[#D4FF00]/20 px-2 py-0.5 rounded-xl">
                    v2.0 Beta
                 </span>
              </div>
@@ -142,12 +142,12 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
                 type="button"
                 onClick={handleActivateBetaVip}
                 disabled={isActivating}
-                className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 rounded-xl active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(212,255,0,0.25)] flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(212,255,0,0.2)] flex items-center justify-center gap-2 disabled:opacity-50"
              >
                 <Crown size={16} />
                 {isActivating ? "Активация..." : "Активировать ранний доступ"}
              </button>
-             <div className="text-[10px] text-neutral-500 text-center">
+             <div className="text-xs text-neutral-400 text-center font-medium">
                 Доступ открывается бесплатно для участников закрытого бета-теста
              </div>
           </div>
@@ -155,7 +155,7 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
 
        {/* Roadmap of features in development */}
        <div className="space-y-3">
-          <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest px-1">
+          <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider px-1">
              Что создаётся прямо сейчас
           </div>
 
@@ -164,23 +164,23 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
              return (
                 <div 
                    key={i} 
-                   className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl rounded-2xl p-4 flex gap-3.5 items-start"
+                   className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4 flex gap-3.5 items-start"
                 >
-                   <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#D4FF00] shrink-0 mt-0.5">
-                      <Icon size={17} />
+                   <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[#D4FF00] shrink-0 mt-0.5">
+                      <Icon size={18} />
                    </div>
                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                          <h4 className="text-white text-sm font-semibold truncate">{item.title}</h4>
-                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-xl shrink-0 ${
                             item.tag === 'Тестирование' 
-                               ? 'bg-[#D4FF00]/15 text-[#D4FF00] border border-[#D4FF00]/30' 
-                               : 'bg-white/[0.06] text-neutral-400'
+                               ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
+                               : 'bg-white/[0.06] text-neutral-300 border border-white/[0.08]'
                          }`}>
                             {item.tag}
                          </span>
                       </div>
-                      <p className="text-xs text-neutral-400 leading-relaxed">{item.desc}</p>
+                      <p className="text-xs text-neutral-300 leading-relaxed">{item.desc}</p>
                    </div>
                 </div>
              );
@@ -188,9 +188,9 @@ export default function Pro({ user, onUpdate }: { user: UserProfile, onUpdate: (
        </div>
 
        {/* Feedback suggestion */}
-       <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 text-center space-y-2">
+       <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 text-center space-y-2">
           <div className="text-xs font-semibold text-white">Есть идея для полезной фичи?</div>
-          <p className="text-[11px] text-neutral-500 leading-relaxed">
+          <p className="text-xs text-neutral-400 leading-relaxed">
              Мы строим персональный интеллект для атлетов на основе реального опыта тренировок. Все пожелания учитываются в релизе.
           </p>
        </div>

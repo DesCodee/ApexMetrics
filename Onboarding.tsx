@@ -50,8 +50,8 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
           <div className="absolute inset-0 border-4 border-[#D4FF00] border-t-transparent rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center text-3xl">🤖</div>
         </div>
-        <h2 className="text-2xl font-serif text-[#D4FF00] mb-3">ИИ анализирует...</h2>
-        <p className="text-neutral-400 font-medium leading-relaxed max-w-xs">
+        <h2 className="text-2xl font-bold tracking-tight text-[#D4FF00] mb-3">ИИ анализирует...</h2>
+        <p className="text-sm text-neutral-300 font-medium leading-relaxed max-w-xs">
             Генерируем тренировочную программу и рассчитываем КБЖУ под твои параметры
         </p>
       </div>
@@ -61,24 +61,24 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
   return (
     <div className="min-h-screen bg-black text-white p-6 flex flex-col items-center">
       <div className="flex-1 flex flex-col justify-center max-w-md w-full">
-        <div className="mb-10 text-center animate-in slide-in-from-top-4">
-           <div className="text-4xl font-serif text-[#D4FF00] mb-2 leading-none">apex</div>
-           <div className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">
+        <div className="mb-8 text-center animate-in slide-in-from-top-4">
+           <div className="text-3xl font-extrabold tracking-tight text-[#D4FF00] mb-2 leading-none uppercase">apex</div>
+           <div className="text-xs text-neutral-400 uppercase tracking-wider font-semibold">
                {tgUser?.first_name ? `Добро пожаловать, ${tgUser.first_name}` : 'Персональная настройка'}
            </div>
         </div>
 
-        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300" key={step}>
+        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300" key={step}>
           {step === 1 && (
             <>
-              <h2 className="text-xl font-bold text-center mb-6">Базовые параметры</h2>
+              <h2 className="text-xl font-bold tracking-tight text-center text-white mb-2">Базовые параметры</h2>
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 ml-1">Пол</label>
-                <div className="flex bg-neutral-900 border border-neutral-800 rounded-2xl p-1 h-[56px]">
+                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5 ml-1">Пол</label>
+                <div className="flex bg-neutral-900 border border-neutral-800 rounded-2xl p-1 h-[54px]">
                   {(['M', 'F'] as const).map(g => (
                     <button 
                       key={g} onClick={() => setGender(g)}
-                      className={`flex-1 text-sm font-semibold rounded-xl transition-all ${gender === g ? 'bg-white text-black shadow-md' : 'text-neutral-500'}`}
+                      className={`flex-1 text-sm font-semibold rounded-xl transition-all ${gender === g ? 'bg-white text-black shadow-md font-bold' : 'text-neutral-400 hover:text-white'}`}
                     >
                       {g === 'M' ? 'Мужской' : 'Женский'}
                     </button>
@@ -91,7 +91,7 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
 
           {step === 2 && (
             <>
-              <h2 className="text-xl font-bold text-center mb-6">Физиология</h2>
+              <h2 className="text-xl font-bold tracking-tight text-center text-white mb-2">Физиология</h2>
               <NumberInput label="Вес (кг)" value={weight} onChange={setWeight} />
               <NumberInput label="Рост (см)" value={height} onChange={setHeight} />
             </>
@@ -99,9 +99,9 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
 
           {step === 3 && (
             <>
-              <h2 className="text-xl font-bold text-center mb-6">Цели и Активность</h2>
+              <h2 className="text-xl font-bold tracking-tight text-center text-white mb-2">Цели и Активность</h2>
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 ml-1">Главная Цель</label>
+                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5 ml-1">Главная Цель</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'cut', label: 'Сушка' },
@@ -110,7 +110,7 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
                   ].map(g => (
                     <button 
                       key={g.id} onClick={() => setGoal(g.id as Goal)}
-                      className={`py-3.5 rounded-2xl text-sm font-semibold transition-all border ${goal === g.id ? 'bg-[#D4FF00]/10 border-[#D4FF00]/50 text-[#D4FF00]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                      className={`py-3.5 rounded-xl text-sm font-semibold transition-all border ${goal === g.id ? 'bg-[#D4FF00]/10 border-[#D4FF00] text-[#D4FF00]' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700'}`}
                     >
                       {g.label}
                     </button>
@@ -118,7 +118,7 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3 ml-1 mt-4">Активность</label>
+                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2.5 ml-1 mt-2">Активность</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'sedentary', label: 'Сидячая' },
@@ -128,7 +128,7 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
                   ].map(act => (
                     <button 
                       key={act.id} onClick={() => setActivity(act.id as ActivityLevel)}
-                      className={`py-3.5 rounded-2xl text-sm font-semibold transition-all border ${activity === act.id ? 'bg-[#D4FF00]/10 border-[#D4FF00]/50 text-[#D4FF00]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                      className={`py-3.5 rounded-xl text-sm font-semibold transition-all border ${activity === act.id ? 'bg-[#D4FF00]/10 border-[#D4FF00] text-[#D4FF00]' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700'}`}
                     >
                       {act.label}
                     </button>
@@ -139,12 +139,12 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
           )}
         </div>
 
-        <div className="flex items-center gap-3 mt-8">
+        <div className="flex items-center gap-3 mt-6">
           {step > 1 && (
             <button 
               type="button"
               onClick={handleBack}
-              className="py-4 px-5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-neutral-300 font-bold text-sm active:scale-95 transition-all"
+              className="py-3.5 px-5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-neutral-300 font-semibold text-sm active:scale-95 transition-all"
             >
               ← Назад
             </button>
@@ -152,7 +152,7 @@ export default function Onboarding({ onComplete, tgUser }: { onComplete: (user: 
           <button 
             type="button"
             onClick={handleNext}
-            className="flex-1 bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
+            className="flex-1 bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)]"
           >
             {step < 3 ? 'Далее' : 'Создать программу'}
           </button>

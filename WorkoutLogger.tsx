@@ -1,16 +1,55 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness, formatTonnage } from '../appEngine';
-import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info, Plus, Trash2, Timer, X, RotateCcw, Trophy } from 'lucide-react';
+import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info, Plus, Trash2, Timer, X, RotateCcw, Trophy, Sparkles } from 'lucide-react';
 import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent, saveCnsLog } from '../firebase';
 import { tgHaptic } from '../utils/haptics';
 import CnsRecoveryModal from './CnsRecoveryModal';
 
 export default function Workouts({ user }: { user: UserProfile }) {
-  const [activeSession, setActiveSession] = useState<any | null>(null);
-  const [sessionData, setSessionData] = useState<any>({});
+  // Resilient draft loader for 0ms lag & no race conditions
+  const initialDraft = (() => {
+    try {
+      const cachedSession = localStorage.getItem('apex_active_session');
+      const cachedData = localStorage.getItem('apex_session_data');
+      const cachedStart = localStorage.getItem('apex_session_start_time');
+      if (cachedSession || cachedData || cachedStart) {
+        const parsedStart = cachedStart ? parseInt(cachedStart, 10) : 0;
+        const now = Date.now();
+        const isFresh = parsedStart > 0 && (now - parsedStart < 12 * 60 * 60 * 1000) && (parsedStart <= now + 60000);
+        if (isFresh && cachedSession && cachedData) {
+          const session = JSON.parse(cachedSession);
+          const data = JSON.parse(cachedData);
+          if (session && typeof data === 'object' && Object.keys(data).length > 0) {
+            return { session, data, startTime: parsedStart };
+          }
+        }
+        // Cleanup expired (>=12h) or corrupt draft immediately
+        localStorage.removeItem('apex_active_session');
+        localStorage.removeItem('apex_session_data');
+        localStorage.removeItem('apex_session_start_time');
+        localStorage.removeItem('apex_rest_target_ts');
+        localStorage.removeItem('apex_rest_total');
+      }
+    } catch {}
+    return null;
+  })();
+
+  const [activeSession, setActiveSession] = useState<any | null>(() => initialDraft?.session || null);
+  const [sessionData, setSessionData] = useState<any>(() => initialDraft?.data || {});
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(() => initialDraft?.startTime || null);
+  const [recoveredNotice, setRecoveredNotice] = useState<boolean>(() => Boolean(initialDraft));
+  const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
   
   // View states: 'idle' (list) -> 'cns_check' (sliders) -> 'cns_result' -> 'logging' (gym log) -> 'summary'
-  const [viewState, setViewState] = useState<'idle' | 'cns_check' | 'cns_result' | 'logging' | 'summary'>('idle');
+  const [viewState, setViewState] = useState<'idle' | 'cns_check' | 'cns_result' | 'logging' | 'summary'>(() => initialDraft ? 'logging' : 'idle');
+  
+  // Auto-hide recovered notification
+  useEffect(() => {
+    if (recoveredNotice) {
+      const t = setTimeout(() => setRecoveredNotice(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [recoveredNotice]);
   
   // CNS States
   const [sleepHours, setSleepHours] = useState(7);
@@ -21,39 +60,94 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   // Summary States
   const [summaryData, setSummaryData] = useState<any>(null);
+  
+  // Resilient Rest Timer using absolute target timestamp
   const [restTimer, setRestTimer] = useState(0);
+  const [restTargetTs, setRestTargetTs] = useState<number | null>(null);
   const [restActive, setRestActive] = useState(false);
   const [restTotal, setRestTotal] = useState(60);
 
+  // Initialize and restore timer from localStorage if app was backgrounded
   useEffect(() => {
-    let interval: any;
-    if (restActive && restTimer > 0) {
-        interval = setInterval(() => {
-            setRestTimer((prev) => {
-                if (prev <= 1) {
-                    tgHaptic('success');
-                    setRestActive(false);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-    } else if (restTimer === 0 && restActive) {
+    try {
+      const savedTarget = localStorage.getItem('apex_rest_target_ts');
+      const savedTotal = localStorage.getItem('apex_rest_total');
+      if (savedTarget) {
+        const target = parseInt(savedTarget, 10);
+        const remaining = Math.max(0, Math.ceil((target - Date.now()) / 1000));
+        if (remaining > 0) {
+          setRestTargetTs(target);
+          setRestTimer(remaining);
+          setRestTotal(savedTotal ? parseInt(savedTotal, 10) : remaining);
+          setRestActive(true);
+        } else {
+          // Rest finished while app was backgrounded/minimized
+          tgHaptic('success');
+          localStorage.removeItem('apex_rest_target_ts');
+          localStorage.removeItem('apex_rest_total');
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Timer loop driven by real timestamps (handles app minimization safely)
+  useEffect(() => {
+    if (!restActive || !restTargetTs) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((restTargetTs - Date.now()) / 1000));
+      setRestTimer(remaining);
+
+      if (remaining <= 0) {
+        tgHaptic('success');
         setRestActive(false);
-    }
-    return () => clearInterval(interval);
-  }, [restActive, restTimer]);
+        setRestTargetTs(null);
+        localStorage.removeItem('apex_rest_target_ts');
+        localStorage.removeItem('apex_rest_total');
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 500);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        tick();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [restActive, restTargetTs]);
 
   const startRest = (sec: number) => {
       tgHaptic('light');
+      const target = Date.now() + sec * 1000;
       setRestTotal(sec);
       setRestTimer(sec);
+      setRestTargetTs(target);
       setRestActive(true);
+      try {
+        localStorage.setItem('apex_rest_target_ts', String(target));
+        localStorage.setItem('apex_rest_total', String(sec));
+      } catch {}
   };
+
   const stopRest = () => {
       tgHaptic('light');
       setRestActive(false);
       setRestTimer(0);
+      setRestTargetTs(null);
+      try {
+        localStorage.removeItem('apex_rest_target_ts');
+        localStorage.removeItem('apex_rest_total');
+      } catch {}
   };
 
 
@@ -62,39 +156,51 @@ export default function Workouts({ user }: { user: UserProfile }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Check local storage for active session recovery
-    const cachedSession = localStorage.getItem('apex_active_session');
-    const cachedData = localStorage.getItem('apex_session_data');
-    if (cachedSession && cachedData) {
-      try {
-        setActiveSession(JSON.parse(cachedSession));
-        setSessionData(JSON.parse(cachedData));
-        setViewState('logging');
-      } catch(e) {}
+  // Synchronous workout draft helper
+  const syncWorkoutDraft = (session: any, data: any, startTime?: number) => {
+    try {
+      if (session && data) {
+        localStorage.setItem('apex_active_session', JSON.stringify(session));
+        localStorage.setItem('apex_session_data', JSON.stringify(data));
+        if (startTime) {
+          localStorage.setItem('apex_session_start_time', String(startTime));
+        }
+      }
+    } catch (e) {
+      console.warn('Draft save error', e);
     }
-  }, []);
+  };
+
+  const clearWorkoutDraft = () => {
+    try {
+      localStorage.removeItem('apex_active_session');
+      localStorage.removeItem('apex_session_data');
+      localStorage.removeItem('apex_session_start_time');
+      localStorage.removeItem('apex_rest_target_ts');
+      localStorage.removeItem('apex_rest_total');
+    } catch {}
+  };
 
   useEffect(() => {
     // Manage closing confirmation and local storage sync
     const tg = (window as any).Telegram?.WebApp;
     if (viewState === 'logging' && activeSession) {
       if (tg?.enableClosingConfirmation) tg.enableClosingConfirmation();
-      localStorage.setItem('apex_active_session', JSON.stringify(activeSession));
-      localStorage.setItem('apex_session_data', JSON.stringify(sessionData));
+      syncWorkoutDraft(activeSession, sessionData, sessionStartTime || Date.now());
     } else {
       if (tg?.disableClosingConfirmation) tg.disableClosingConfirmation();
       if (viewState === 'idle' || viewState === 'summary') {
-          localStorage.removeItem('apex_active_session');
-          localStorage.removeItem('apex_session_data');
+        clearWorkoutDraft();
       }
     }
     return () => {
       if (tg?.disableClosingConfirmation) tg.disableClosingConfirmation();
     };
-  }, [viewState, activeSession, sessionData]);
+  }, [viewState, activeSession, sessionData, sessionStartTime]);
 
-  const fetchOrGeneratePlans = async () => {
+  const [regenerating, setRegenerating] = useState(false);
+
+  const fetchOrGeneratePlans = async (force = false) => {
     setLoading(true);
     setError(null);
     if (!auth.currentUser) {
@@ -103,62 +209,82 @@ export default function Workouts({ user }: { user: UserProfile }) {
     }
     const uid = auth.currentUser.uid;
     
-    let loaded = await loadWorkoutLogs(uid);
+    let loaded = force ? [] : await loadWorkoutLogs(uid);
 
     if (loaded.length === 0) {
+       const fallbackData = {
+           workouts: [
+              {
+                "title": "Фулбади A",
+                "day": "День 1",
+                "duration": "60 мин",
+                "exercises": [
+                  { "name": "Приседания со штангой", "sets": 3, "reps": "8-10", "rpe": 8 },
+                  { "name": "Жим штанги лежа", "sets": 3, "reps": "8-10", "rpe": 8 },
+                  { "name": "Тяга штанги в наклоне", "sets": 3, "reps": "8-10", "rpe": 8 },
+                  { "name": "Выпады с гантелями", "sets": 3, "reps": "10-12", "rpe": 8 },
+                  { "name": "Скручивания на пресс", "sets": 3, "reps": "15-20", "rpe": 8 }
+                ]
+              },
+              {
+                "title": "Фулбади B",
+                "day": "День 2",
+                "duration": "60 мин",
+                "exercises": [
+                  { "name": "Становая тяга", "sets": 3, "reps": "5-8", "rpe": 8 },
+                  { "name": "Армейский жим", "sets": 3, "reps": "8-10", "rpe": 8 },
+                  { "name": "Подтягивания", "sets": 3, "reps": "8-12", "rpe": 8 },
+                  { "name": "Жим ногами", "sets": 3, "reps": "10-12", "rpe": 8 },
+                  { "name": "Планка", "sets": 3, "reps": "60 сек", "rpe": 8 }
+                ]
+              },
+              {
+                "title": "Гипертрофия",
+                "day": "День 3",
+                "duration": "50 мин",
+                "exercises": [
+                  { "name": "Жим гантелей под углом", "sets": 3, "reps": "10-12", "rpe": 8 },
+                  { "name": "Тяга верхнего блока", "sets": 3, "reps": "10-12", "rpe": 8 },
+                  { "name": "Разгибания ног", "sets": 3, "reps": "12-15", "rpe": 9 },
+                  { "name": "Сгибания рук со штангой", "sets": 3, "reps": "10-12", "rpe": 9 },
+                  { "name": "Разгибания на трицепс", "sets": 3, "reps": "12-15", "rpe": 9 }
+                ]
+              }
+           ]
+       };
+
        try {
            const forceFallback = localStorage.getItem('apex_force_fallback') === 'true';
-           const res = await fetch('/api/generateWorkout', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({ profile: user, forceFallback })
-           });
+           const controller = new AbortController();
+           const timeoutId = setTimeout(() => controller.abort(), 7000);
            
-           let data;
-           if (!res.ok) {
-               console.warn('Backend failed, using frontend fallback');
-               data = {
-                   workouts: [
-                      {
-                        "title": "Фулбади A",
-                        "day": "День 1",
-                        "duration": "60 мин",
-                        "exercises": [
-                          { "name": "Приседания со штангой", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Жим штанги лежа", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Тяга штанги в наклоне", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Выпады с гантелями", "sets": 3, "reps": "10-12", "rpe": 8 },
-                          { "name": "Скручивания на пресс", "sets": 3, "reps": "15-20", "rpe": 8 }
-                        ]
-                      },
-                      {
-                        "title": "Фулбади B",
-                        "day": "День 2",
-                        "duration": "60 мин",
-                        "exercises": [
-                          { "name": "Становая тяга", "sets": 3, "reps": "5-8", "rpe": 8 },
-                          { "name": "Армейский жим", "sets": 3, "reps": "8-10", "rpe": 8 },
-                          { "name": "Подтягивания", "sets": 3, "reps": "8-12", "rpe": 8 },
-                          { "name": "Жим ногами", "sets": 3, "reps": "10-12", "rpe": 8 },
-                          { "name": "Планка", "sets": 3, "reps": "60 сек", "rpe": 8 }
-                        ]
-                      },
-                      {
-                        "title": "Гипертрофия",
-                        "day": "День 3",
-                        "duration": "50 мин",
-                        "exercises": [
-                          { "name": "Жим гантелей под углом", "sets": 3, "reps": "10-12", "rpe": 8 },
-                          { "name": "Тяга верхнего блока", "sets": 3, "reps": "10-12", "rpe": 8 },
-                          { "name": "Разгибания ног", "sets": 3, "reps": "12-15", "rpe": 9 },
-                          { "name": "Сгибания рук со штангой", "sets": 3, "reps": "10-12", "rpe": 9 },
-                          { "name": "Разгибания на трицепс", "sets": 3, "reps": "12-15", "rpe": 9 }
-                        ]
-                      }
-                   ]
-               };
-           } else {
-               data = await res.json();
+           let data = fallbackData;
+           try {
+             const res = await fetch('/api/generateWorkout', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ profile: user, forceFallback }),
+                 signal: controller.signal
+             });
+             clearTimeout(timeoutId);
+             
+             if (!res.ok) {
+                 setOfflineNotice('Использую офлайн-режим генерации');
+                 setTimeout(() => setOfflineNotice(null), 4500);
+                 data = fallbackData;
+             } else {
+                 const json = await res.json();
+                 data = json.workouts && json.workouts.length > 0 ? json : fallbackData;
+                 if (json.source === 'fallback') {
+                   setOfflineNotice('Использую офлайн-режим генерации');
+                   setTimeout(() => setOfflineNotice(null), 4500);
+                 }
+             }
+           } catch (fetchErr: any) {
+             clearTimeout(timeoutId);
+             setOfflineNotice('Использую офлайн-режим генерации');
+             setTimeout(() => setOfflineNotice(null), 4500);
+             data = fallbackData;
            }
            
            loaded = data.workouts.map((w: any, index: number) => ({
@@ -192,6 +318,23 @@ export default function Workouts({ user }: { user: UserProfile }) {
   useEffect(() => {
      fetchOrGeneratePlans();
   }, []);
+
+  const forceRegeneratePlans = async () => {
+    if (!auth.currentUser || regenerating) return;
+    tgHaptic('medium');
+    setRegenerating(true);
+    const uid = auth.currentUser.uid;
+    try {
+      localStorage.removeItem(`apex_workouts_${uid}`);
+      setPlans([]);
+      await fetchOrGeneratePlans(true);
+      tgHaptic('success');
+    } catch {
+      tgHaptic('warning');
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const triggerHaptic = () => {
     const tg = (window as any).Telegram?.WebApp;
@@ -251,12 +394,47 @@ export default function Workouts({ user }: { user: UserProfile }) {
         return { 
           weight: prevWeight, 
           reps: prevReps, 
-          rpe: Array.isArray(ex.sets) && ex.sets[sIdx]?.rpe ? ex.sets[sIdx].rpe : (ex.rpe || 8) 
+          rpe: Array.isArray(ex.sets) && ex.sets[sIdx]?.rpe ? ex.sets[sIdx].rpe : (ex.rpe || 8),
+          completed: false
         };
       });
     });
+    const now = Date.now();
     setSessionData(initialData);
+    setSessionStartTime(now);
     setViewState('logging');
+    syncWorkoutDraft(activeSession, initialData, now);
+  };
+
+  const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
+    setSessionData((prev: any) => {
+      const currentSets = prev[exerciseIndex] || [];
+      const updated = currentSets.map((s: any, idx: number) => {
+        if (idx === setIndex) {
+          const nextState = !s.completed;
+          if (nextState) {
+            tgHaptic('medium');
+            // Auto start rest timer on completing set
+            startRest(90);
+          } else {
+            tgHaptic('light');
+          }
+          return { ...s, completed: nextState };
+        }
+        return s;
+      });
+      const nextData = { ...prev, [exerciseIndex]: updated };
+      syncWorkoutDraft(activeSession, nextData, sessionStartTime || Date.now());
+      return nextData;
+    });
+  };
+
+  const [expandedSetKey, setExpandedSetKey] = useState<string | null>(null);
+
+  const toggleExpandSet = (exIdx: number, setIdx: number) => {
+    tgHaptic('light');
+    const key = `${exIdx}-${setIdx}`;
+    setExpandedSetKey(prev => prev === key ? null : key);
   };
 
   const addSet = (exerciseIndex: number) => {
@@ -264,13 +442,15 @@ export default function Workouts({ user }: { user: UserProfile }) {
     setSessionData((prev: any) => {
       const currentSets = prev[exerciseIndex] || [];
       const lastSet = currentSets[currentSets.length - 1] || { weight: '', reps: '', rpe: 8 };
-      return {
+      const nextData = {
         ...prev,
         [exerciseIndex]: [
           ...currentSets,
-          { weight: lastSet.weight || '', reps: lastSet.reps || '', rpe: lastSet.rpe || 8 }
+          { weight: lastSet.weight || '', reps: lastSet.reps || '', rpe: lastSet.rpe || 8, completed: false }
         ]
       };
+      syncWorkoutDraft(activeSession, nextData, sessionStartTime || Date.now());
+      return nextData;
     });
   };
 
@@ -279,10 +459,12 @@ export default function Workouts({ user }: { user: UserProfile }) {
     setSessionData((prev: any) => {
       const currentSets = prev[exerciseIndex] || [];
       if (currentSets.length <= 1) return prev;
-      return {
+      const nextData = {
         ...prev,
         [exerciseIndex]: currentSets.filter((_: any, idx: number) => idx !== setIndex)
       };
+      syncWorkoutDraft(activeSession, nextData, sessionStartTime || Date.now());
+      return nextData;
     });
   };
 
@@ -292,6 +474,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
       setSessionData((prev: any) => {
         const newData = { ...prev };
         newData[exerciseIndex][setIndex][field] = '';
+        syncWorkoutDraft(activeSession, newData, sessionStartTime || Date.now());
         return newData;
       });
       return;
@@ -309,8 +492,20 @@ export default function Workouts({ user }: { user: UserProfile }) {
     setSessionData((prev: any) => {
       const newData = { ...prev };
       newData[exerciseIndex][setIndex][field] = finalValue;
+      syncWorkoutDraft(activeSession, newData, sessionStartTime || Date.now());
       return newData;
     });
+  };
+
+  const cancelSessionDraft = () => {
+    tgHaptic('warning');
+    if (confirm('Отменить текущую тренировку и удалить черновик?')) {
+      clearWorkoutDraft();
+      setActiveSession(null);
+      setSessionData({});
+      setSessionStartTime(null);
+      setViewState('idle');
+    }
   };
 
   const showRpeInfo = () => {
@@ -407,43 +602,43 @@ export default function Workouts({ user }: { user: UserProfile }) {
               </div>
            </div>
          ))}
-         <div className="text-center text-neutral-500 text-xs mt-4 animate-pulse">Синхронизация с AI тренером...</div>
+          <div className="text-center text-neutral-400 text-xs mt-4 animate-pulse">Синхронизация с AI тренером...</div>
        </div>
      );
   }
 
   if (viewState === 'cns_check') {
     return (
-      <div className="p-5 space-y-8 animate-in slide-in-from-right duration-300 max-w-lg mx-auto pb-24">
-        <button onClick={() => setViewState('idle')} className="flex items-center text-neutral-400 gap-1 mt-2">
-          <ChevronLeft size={20} /> Отмена
+      <div className="p-5 space-y-4 animate-in slide-in-from-right duration-300 max-w-lg mx-auto pb-24">
+        <button onClick={() => setViewState('idle')} className="flex items-center text-neutral-400 hover:text-white gap-1 text-xs font-medium">
+          <ChevronLeft size={16} /> Назад
         </button>
         <div>
-          <h1 className="text-2xl font-serif text-white mb-2">Check-in ЦНС</h1>
-          <p className="text-neutral-400 text-sm">Оцени свое состояние перед тренировкой, чтобы скорректировать объем.</p>
+          <h1 className="text-xl font-bold tracking-tight text-white mb-1.5">Check-in ЦНС</h1>
+          <p className="text-neutral-300 text-sm leading-relaxed">Оцени свое состояние перед тренировкой, чтобы скорректировать объем и избежать перетренированности.</p>
         </div>
         
-        <div className="space-y-6">
-          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
-            <div className="flex justify-between items-center mb-4">
-              <label className="text-sm font-bold text-white flex items-center gap-2"><Moon size={16} className="text-blue-400"/> Сон</label>
-              <span className="text-[#D4FF00] font-bold">{sleepHours} ч</span>
+        <div className="space-y-3">
+          <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-2.5">
+              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2"><Moon size={15} className="text-purple-400"/> Сон</label>
+              <span className="text-[#D4FF00] font-bold text-base tabular-nums">{sleepHours} ч</span>
             </div>
             <input type="range" min="0" max="12" step="0.5" value={sleepHours} onChange={(e) => setSleepHours(Number(e.target.value))} className="w-full accent-[#D4FF00]" />
           </div>
 
-          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
-            <div className="flex justify-between items-center mb-4">
-              <label className="text-sm font-bold text-white flex items-center gap-2"><Activity size={16} className="text-orange-400"/> Мышечная боль (1-10)</label>
-              <span className="text-[#D4FF00] font-bold">{soreness}</span>
+          <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-2.5">
+              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2"><Activity size={15} className="text-amber-400"/> Мышечная боль (1-10)</label>
+              <span className="text-[#D4FF00] font-bold text-base tabular-nums">{soreness}</span>
             </div>
             <input type="range" min="1" max="10" step="1" value={soreness} onChange={(e) => setSoreness(Number(e.target.value))} className="w-full accent-[#D4FF00]" />
           </div>
 
-          <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5">
-            <div className="flex justify-between items-center mb-4">
-              <label className="text-sm font-bold text-white flex items-center gap-2"><ShieldAlert size={16} className="text-red-400"/> Уровень стресса (1-10)</label>
-              <span className="text-[#D4FF00] font-bold">{stress}</span>
+          <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-2.5">
+              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider flex items-center gap-2"><ShieldAlert size={15} className="text-red-400"/> Уровень стресса (1-10)</label>
+              <span className="text-[#D4FF00] font-bold text-base tabular-nums">{stress}</span>
             </div>
             <input type="range" min="1" max="10" step="1" value={stress} onChange={(e) => setStress(Number(e.target.value))} className="w-full accent-[#D4FF00]" />
           </div>
@@ -451,9 +646,9 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
         <button 
           onClick={calculateCns}
-          className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
+          className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)]"
         >
-          Анализировать
+          Анализировать состояние
         </button>
       </div>
     );
@@ -461,27 +656,27 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   if (viewState === 'cns_result' && cnsResult) {
     return (
-      <div className="p-5 space-y-6 animate-in zoom-in-95 duration-300 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[75vh]">
+      <div className="p-5 space-y-4 animate-in zoom-in-95 duration-300 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[75vh]">
         <div className="relative w-32 h-32 mb-2">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="45" fill="none" stroke="#262626" strokeWidth="8" />
-            <circle cx="50" cy="50" r="45" fill="none" stroke={cnsResult.status === 'Optimal' ? '#D4FF00' : cnsResult.status === 'Moderate' ? '#F59E0B' : '#EF4444'} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 * (1 - cnsResult.score / 100)} className="transition-all duration-1000 ease-out" />
+            <circle cx="50" cy="50" r="45" fill="none" stroke={cnsResult.status === 'Optimal' ? '#10B981' : cnsResult.status === 'Moderate' ? '#F59E0B' : '#EF4444'} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 * (1 - cnsResult.score / 100)} className="transition-all duration-1000 ease-out" />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold text-white">{cnsResult.score}%</div>
-            <div className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">ЦНС</div>
+            <div className="text-3xl font-extrabold tracking-tight text-white tabular-nums">{cnsResult.score}%</div>
+            <div className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">ЦНС</div>
           </div>
         </div>
         
         <div className="text-center">
-          <h2 className="text-2xl font-serif text-white mb-2">
+          <h2 className="text-xl font-bold tracking-tight text-white mb-1.5">
             {cnsResult.status === 'Optimal' ? 'Готов на 100%' : cnsResult.status === 'Moderate' ? 'Средняя готовность' : 'Истощение ЦНС'}
           </h2>
-          <p className="text-neutral-400 text-sm max-w-xs mx-auto leading-relaxed">{cnsResult.recommendation}</p>
+          <p className="text-neutral-300 text-sm max-w-xs mx-auto leading-relaxed">{cnsResult.recommendation}</p>
         </div>
 
         {/* Action Buttons */}
-        <div className="w-full space-y-3 pt-2">
+        <div className="w-full space-y-2.5 pt-2">
           {cnsResult.status !== 'Optimal' && (
             <button 
               onClick={() => {
@@ -490,7 +685,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
                 setActiveSession(deloadPlan);
                 proceedToWorkout();
               }}
-              className="w-full bg-[#D4FF00] text-black font-bold text-sm py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] flex items-center justify-center gap-2"
+              className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)] flex items-center justify-center gap-2"
             >
               <ShieldAlert size={18} />
               Адаптировать под ЦНС (Smart Deload)
@@ -500,7 +695,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
           {cnsResult.status === 'Optimal' && (
             <button 
               onClick={proceedToWorkout}
-              className="w-full bg-[#D4FF00] text-black font-bold text-base py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)]"
+              className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)]"
             >
               Начать тренировку
             </button>
@@ -511,7 +706,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
               triggerHaptic();
               setShowRecoveryModal(true);
             }}
-            className="w-full bg-white/[0.04] border border-white/[0.1] hover:border-white/[0.2] text-white font-bold text-sm py-3.5 rounded-2xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+            className="w-full bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15] text-white font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
             <Brain size={16} className="text-[#D4FF00]" />
             Протокол восстановления ЦНС
@@ -520,7 +715,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
           {cnsResult.status !== 'Optimal' && (
             <button 
               onClick={proceedToWorkout}
-              className="w-full bg-transparent text-neutral-500 hover:text-neutral-300 font-medium text-xs py-2 transition-colors"
+              className="w-full bg-transparent text-neutral-400 hover:text-white font-medium text-xs py-2 transition-colors"
             >
               Тренироваться по плану (Hardcore)
             </button>
@@ -528,7 +723,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
           <button 
             onClick={() => setViewState('idle')}
-            className="w-full text-neutral-600 hover:text-neutral-400 text-xs py-1 transition-colors"
+            className="w-full text-neutral-400 hover:text-white text-xs py-1 transition-colors"
           >
             Отложить тренировку на завтра
           </button>
@@ -547,107 +742,201 @@ export default function Workouts({ user }: { user: UserProfile }) {
 
   if (viewState === 'logging' && activeSession) {
     return (
-      <div className="p-5 space-y-6 animate-in slide-in-from-right duration-300 max-w-lg mx-auto pb-24">
-        <button onClick={() => setViewState('idle')} className="flex items-center text-neutral-400 gap-1 mt-2">
-          <ChevronLeft size={20} /> Завершить позже
-        </button>
+      <div className="p-5 space-y-4 animate-in slide-in-from-right duration-300 max-w-lg mx-auto pb-24">
+        {/* Recovery and offline alerts */}
+        {recoveredNotice && (
+          <div className="bg-[#D4FF00]/15 border border-[#D4FF00]/40 rounded-xl p-3 flex items-center justify-between animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 text-xs text-[#D4FF00] font-semibold">
+              <CheckCircle size={15} />
+              <span>Прогресс тренировки восстановлен</span>
+            </div>
+            <button 
+              onClick={() => setRecoveredNotice(false)} 
+              className="text-neutral-400 hover:text-white text-xs px-2 py-0.5"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {offlineNotice && (
+          <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 flex items-center gap-2 text-xs text-amber-300 font-semibold animate-in fade-in duration-300">
+            <Info size={15} className="shrink-0" />
+            <span>{offlineNotice}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mt-1">
+          <button onClick={() => setViewState('idle')} className="flex items-center text-neutral-400 hover:text-white gap-1 text-xs font-medium">
+            <ChevronLeft size={16} /> Назад к списку
+          </button>
+          <button 
+            type="button"
+            onClick={cancelSessionDraft} 
+            className="text-red-400/90 hover:text-red-400 text-xs px-2.5 py-1 rounded-xl bg-red-500/10 border border-red-500/20 active:scale-95 transition-all"
+          >
+            Сбросить черновик
+          </button>
+        </div>
+
         <div>
-          <h1 className="text-2xl font-serif text-white">{activeSession.title}</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white">{activeSession.title}</h1>
           {activeSession.isDeload && (
-            <div className="mt-3 bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-3 flex items-center gap-2.5">
+            <div className="mt-2.5 bg-[#D4FF00]/10 border border-[#D4FF00]/30 rounded-2xl p-3 flex items-center gap-2.5">
               <ShieldAlert size={16} className="text-[#D4FF00] shrink-0" />
-              <div className="text-[11px] text-neutral-300 leading-tight">
+              <div className="text-xs text-neutral-300 leading-tight">
                 <span className="font-bold text-[#D4FF00]">Smart Deload: </span>
                 Снижена осевая нагрузка, RPE 6-7, фокус на приток крови без отказа.
               </div>
             </div>
           )}
         </div>
+
         {/* Floating Rest Timer */}
         {restActive && (
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#D4FF00] text-black px-4 py-2 rounded-full shadow-lg font-bold flex items-center gap-3 z-50 animate-in slide-in-from-bottom-5">
-                <Timer size={16} />
-                <span className="w-12 text-center text-lg">{Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, '0')}</span>
-                <button onClick={stopRest} className="bg-black/10 rounded-full p-1"><X size={14} /></button>
+            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#D4FF00] text-black px-4 py-2.5 rounded-xl shadow-2xl font-bold flex items-center gap-3 z-50 animate-in slide-in-from-bottom-5 border border-black/20">
+                <Timer size={18} className="animate-pulse" />
+                <span className="w-14 text-center text-base font-mono tracking-wider tabular-nums">{Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, '0')}</span>
+                <button onClick={stopRest} className="bg-black/15 hover:bg-black/25 rounded-xl p-1 transition-colors"><X size={14} /></button>
             </div>
         )}
         
-        {/* Rest presets - injected after header */}
-        <div className="flex gap-2 my-4">
-            <button onClick={() => startRest(60)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">60s</button>
-            <button onClick={() => startRest(90)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">90s</button>
-            <button onClick={() => startRest(120)} className="flex-1 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-xl py-2 text-xs font-bold text-neutral-400 active:scale-95 transition-transform hover:text-white">120s</button>
+        {/* Rest presets */}
+        <div className="flex gap-2 my-2">
+            <button onClick={() => startRest(60)} className="flex-1 bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-xs font-semibold text-neutral-300 active:scale-95 transition-transform hover:text-white">60s</button>
+            <button onClick={() => startRest(90)} className="flex-1 bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-xs font-semibold text-neutral-300 active:scale-95 transition-transform hover:text-white">90s</button>
+            <button onClick={() => startRest(120)} className="flex-1 bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-xs font-semibold text-neutral-300 active:scale-95 transition-transform hover:text-white">120s</button>
         </div>
 
-        
-        <div className="space-y-8">
+        {/* Exercises */}
+        <div className="space-y-4">
           {activeSession.exercises?.map((ex: any, i: number) => (
-            <div key={i} className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-4">
-              <div className="font-semibold text-sm text-white mb-1">{ex.name}</div>
-              <div className="text-xs text-neutral-500 mb-4 flex justify-between">
-                 <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)}х{typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
-                 <span className="text-[#D4FF00]">RPE {ex.rpe || 8}</span>
+            <div key={i} className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-2xl p-4">
+              <div className="font-semibold text-base text-white mb-1">{ex.name}</div>
+              <div className="text-xs text-neutral-300 mb-3.5 flex justify-between">
+                 <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)} × {typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
+                 <span className="text-[#D4FF00] font-semibold">RPE {ex.rpe || 8}</span>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-2 mb-2">
+              <div className="space-y-2">
+                <div className="flex text-xs font-semibold text-neutral-300 uppercase tracking-wider px-2 mb-1.5 items-center">
                   <div className="w-8 text-center">#</div>
                   <div className="flex-1 text-center">Вес (кг)</div>
                   <div className="flex-1 text-center">Повторы</div>
-                  <div className="flex-1 text-center flex items-center justify-center gap-1 active:scale-95 transition-transform" onClick={showRpeInfo}>
-                     RPE <Info size={10} className="text-[#D4FF00]" />
-                  </div>
+                  <div className="w-9 text-center">✓</div>
                 </div>
-                {sessionData[i]?.map((set: any, sIdx: number) => (
-                  <div key={sIdx} className="flex gap-2 items-center">
-                    <div className="w-8 text-center text-neutral-500 text-sm font-semibold bg-white/[0.06]/50 rounded-lg py-2">{sIdx + 1}</div>
-                    <input 
-                      type="text" 
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={set.weight}
-                      onChange={(e) => updateSet(i, sIdx, 'weight', e.target.value)}
-                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
-                    />
-                    <input 
-                      type="text" 
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={set.reps}
-                      onChange={(e) => updateSet(i, sIdx, 'reps', e.target.value)}
-                      className="flex-1 w-0 bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl rounded-xl py-2 text-center text-white text-sm font-bold outline-none focus:border-[#D4FF00] transition-colors" 
-                    />
-                    <input 
-                      type="text" 
-                      inputMode="numeric"
-                      placeholder={ex.rpe || '8'}
-                      value={set.rpe}
-                      onChange={(e) => updateSet(i, sIdx, 'rpe', e.target.value)}
-                      className={`flex-1 w-0 bg-white/[0.04] border backdrop-blur-xl rounded-xl py-2 text-center text-sm font-bold outline-none transition-colors ${
-                        set.rpe === '10' ? 'border-amber-400 text-amber-400 focus:border-amber-400' : 'border-white/[0.06] text-neutral-300 focus:border-[#D4FF00]'
-                      }`}
-                    />
-                    {sessionData[i]?.length > 1 && (
-                      <button 
-                        type="button" 
-                        onClick={() => removeSet(i, sIdx)}
-                        className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-red-400 transition-colors"
-                        title="Удалить подход"
+
+                {sessionData[i]?.map((set: any, sIdx: number) => {
+                  const setKey = `${i}-${sIdx}`;
+                  const isExpanded = expandedSetKey === setKey;
+
+                  return (
+                    <div key={sIdx} className="space-y-1.5">
+                      <div 
+                        className={`flex gap-2 items-center p-1.5 rounded-xl transition-all ${
+                          set.completed ? 'bg-[#D4FF00]/[0.08] border border-[#D4FF00]/30' : 'bg-neutral-900/60 border border-neutral-800/80'
+                        }`}
                       >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        {/* Set button - tap to toggle RPE & Delete drawer */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandSet(i, sIdx)}
+                          className={`w-8 h-9 text-xs font-bold rounded-xl flex items-center justify-center transition-all ${
+                            set.completed 
+                              ? 'text-[#D4FF00] bg-[#D4FF00]/20' 
+                              : isExpanded 
+                                ? 'text-white bg-white/[0.15] border border-white/[0.2]' 
+                                : 'text-neutral-300 bg-white/[0.05] hover:text-white'
+                          }`}
+                          title="Настройки подхода (RPE, удалить)"
+                        >
+                          {sIdx + 1}
+                        </button>
+
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={set.weight}
+                          onChange={(e) => updateSet(i, sIdx, 'weight', e.target.value)}
+                          className="flex-1 w-0 bg-neutral-900 border border-neutral-800 rounded-xl py-2 px-1 text-center text-white text-base font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                        />
+
+                        <input 
+                          type="text" 
+                          inputMode="numeric"
+                          placeholder="0"
+                          value={set.reps}
+                          onChange={(e) => updateSet(i, sIdx, 'reps', e.target.value)}
+                          className="flex-1 w-0 bg-neutral-900 border border-neutral-800 rounded-xl py-2 px-1 text-center text-white text-base font-bold outline-none focus:border-[#D4FF00] transition-colors" 
+                        />
+
+                        {/* Completion Checkmark Button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleSetComplete(i, sIdx)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                            set.completed 
+                              ? 'bg-[#D4FF00] text-black shadow-[0_0_15px_rgba(212,255,0,0.4)]' 
+                              : 'bg-white/[0.05] border border-white/[0.1] text-neutral-300 hover:text-white'
+                          }`}
+                          title={set.completed ? "Подход выполнен" : "Отметить подход"}
+                        >
+                          <CheckCircle size={17} />
+                        </button>
+                      </div>
+
+                      {/* Expandable sub-row for RPE & Delete: spacious and prevents mis-clicks */}
+                      {isExpanded && (
+                        <div className="bg-neutral-950/95 border border-white/[0.08] rounded-xl p-3 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-neutral-300">RPE:</span>
+                            <div className="flex gap-1">
+                              {[7, 8, 9, 10].map(rpeVal => (
+                                <button
+                                  key={rpeVal}
+                                  type="button"
+                                  onClick={() => updateSet(i, sIdx, 'rpe', String(rpeVal))}
+                                  className={`w-7 h-7 text-xs font-bold rounded-xl transition-all ${
+                                    Number(set.rpe) === rpeVal 
+                                      ? (rpeVal === 10 ? 'bg-amber-400 text-black' : 'bg-[#D4FF00] text-black')
+                                      : 'bg-white/[0.06] text-neutral-300 hover:text-white'
+                                  }`}
+                                >
+                                  {rpeVal}
+                                </button>
+                              ))}
+                            </div>
+                            <button type="button" onClick={showRpeInfo} className="text-neutral-400 hover:text-white p-1">
+                              <Info size={13} />
+                            </button>
+                          </div>
+
+                          {sessionData[i]?.length > 1 && (
+                            <button 
+                              type="button" 
+                              onClick={() => removeSet(i, sIdx)}
+                              className="px-2.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-semibold flex items-center gap-1 transition-all"
+                              title="Удалить подход"
+                            >
+                              <Trash2 size={13} />
+                              <span>Удалить</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Add set button */}
               <button 
-                type="button"
+                type="button" 
                 onClick={() => addSet(i)}
-                className="mt-3 w-full py-2 bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.05] rounded-xl flex items-center justify-center gap-1.5 text-xs text-neutral-400 hover:text-[#D4FF00] transition-all"
+                className="mt-3.5 w-full py-2.5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold text-neutral-300 hover:text-[#D4FF00] transition-all"
               >
-                <Plus size={13} />
+                <Plus size={14} />
                 <span>Добавить подход</span>
               </button>
             </div>
@@ -657,7 +946,7 @@ export default function Workouts({ user }: { user: UserProfile }) {
         <button 
           onClick={finishSession}
           disabled={isLogging}
-          className="w-full bg-[#D4FF00] text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.3)] mt-8 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
+          className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)] mt-6 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
         >
           {isLogging ? (
              <><div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> Сохранение...</>
@@ -672,40 +961,40 @@ export default function Workouts({ user }: { user: UserProfile }) {
   if (viewState === 'summary' && summaryData) {
      const formattedTonnage = formatTonnage(summaryData.currentVolume);
      return (
-        <div className="p-5 space-y-6 animate-in slide-in-from-bottom-8 duration-500 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[80vh] text-center">
-           <div className="w-20 h-20 bg-[#D4FF00]/10 rounded-full flex items-center justify-center mb-4 text-[#D4FF00]">
-              <CheckCircle size={40} />
+        <div className="p-5 space-y-4 animate-in slide-in-from-bottom-8 duration-500 max-w-lg mx-auto pb-24 flex flex-col items-center justify-center min-h-[80vh] text-center">
+           <div className="w-16 h-16 bg-[#D4FF00]/10 border border-[#D4FF00]/20 rounded-2xl flex items-center justify-center mb-2 text-[#D4FF00] shadow-[0_0_25px_rgba(212,255,0,0.15)]">
+              <CheckCircle size={32} />
            </div>
            
-           <h1 className="text-3xl font-serif text-white mb-2">Тренировка завершена!</h1>
-           <p className="text-neutral-400 text-sm mb-6">Отличная работа. Твоя статистика обновлена.</p>
+           <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Тренировка завершена!</h1>
+           <p className="text-neutral-300 text-sm mb-4">Отличная работа. Твоя статистика обновлена.</p>
            
-           <div className="grid grid-cols-2 gap-4 w-full mb-4">
-              <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
-                 <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Тоннаж</div>
-                 <div className="text-2xl font-bold text-white leading-tight">{formattedTonnage.short}</div>
+           <div className="grid grid-cols-2 gap-3 w-full mb-2">
+              <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-2xl rounded-2xl p-4 text-center">
+                 <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">Тоннаж</div>
+                 <div className="text-2xl font-bold text-white leading-tight tabular-nums">{formattedTonnage.short}</div>
                  {summaryData.currentVolume >= 1000 && (
-                    <div className="text-[11px] text-neutral-400 mt-1">{summaryData.currentVolume.toLocaleString('ru-RU')} кг</div>
+                    <div className="text-xs text-neutral-400 mt-1 tabular-nums">{summaryData.currentVolume.toLocaleString('ru-RU')} кг</div>
                  )}
               </div>
-              <div className="bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl p-5 text-center">
-                 <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-2">Прогресс</div>
-                 <div className={`text-2xl font-bold leading-tight ${summaryData.percentChange >= 0 ? 'text-[#D4FF00]' : 'text-red-400'}`}>
+              <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-2xl rounded-2xl p-4 text-center">
+                 <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-1.5">Прогресс</div>
+                 <div className={`text-2xl font-bold leading-tight tabular-nums ${summaryData.percentChange >= 0 ? 'text-[#D4FF00]' : 'text-red-400'}`}>
                     {summaryData.percentChange >= 0 ? '+' : ''}{summaryData.percentChange}%
                  </div>
-                 <div className="text-[11px] text-neutral-500 mt-1">к прошлой сессии</div>
+                 <div className="text-xs text-neutral-400 mt-1">к прошлой сессии</div>
               </div>
            </div>
 
            {summaryData.currentVolume > 20000 && (
-              <div className="bg-amber-400/10 border border-amber-400/20 text-amber-200 text-xs rounded-xl p-3.5 text-left mb-6 w-full leading-relaxed">
+              <div className="bg-amber-400/10 border border-amber-400/20 text-amber-200 text-xs rounded-xl p-3.5 text-left mb-4 w-full leading-relaxed">
                  ⚡ <b>Высокий силовой объём:</b> тоннаж рассчитывается как сумма (вес × повторы) по всем подходам. При работе на RPE 10 рекомендуем уделить особое внимание сну и восстановлению ЦНС.
               </div>
            )}
 
            <button 
              onClick={closeSummary}
-             className="w-full bg-white text-black font-bold text-lg py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-lg hover:bg-neutral-200"
+             className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(212,255,0,0.2)]"
            >
              Готово
            </button>
@@ -714,20 +1003,32 @@ export default function Workouts({ user }: { user: UserProfile }) {
   }
 
   return (
-    <div className="p-5 space-y-6 animate-in fade-in duration-500 max-w-lg mx-auto">
-       <header className="pt-2">
-         <h1 className="text-2xl font-serif text-white">Программа</h1>
-         <p className="text-[#D4FF00] text-[10px] mt-1.5 font-bold flex items-center gap-2 uppercase tracking-widest">
-           <Brain size={12} />
-           Smart Engine Активирован
-         </p>
+    <div className="p-5 space-y-4 animate-in fade-in duration-500 max-w-lg mx-auto">
+       <header className="pt-2 flex justify-between items-center">
+         <div>
+           <h1 className="text-xl font-bold tracking-tight text-white">Программа</h1>
+           <p className="text-[#D4FF00] text-xs mt-1 font-semibold flex items-center gap-1.5 uppercase tracking-wider">
+             <Brain size={12} />
+             Smart Engine Активирован
+           </p>
+         </div>
+         <button
+           type="button"
+           onClick={forceRegeneratePlans}
+           disabled={regenerating}
+           className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-semibold text-neutral-300 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+           title="Перегенерировать программу тренировок через ИИ"
+         >
+           <Sparkles size={13} className={regenerating ? "animate-spin text-[#D4FF00]" : "text-[#D4FF00]"} />
+           <span>{regenerating ? "Генерация..." : "Обновить AI"}</span>
+         </button>
        </header>
 
        {error && (
          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-center">
            <div className="text-red-400 font-bold mb-1">Ошибка</div>
            <div className="text-neutral-400 text-sm">{error}</div>
-           <button onClick={fetchOrGeneratePlans} className="mt-3 text-[#D4FF00] font-bold text-sm">Попробовать снова</button>
+           <button onClick={() => fetchOrGeneratePlans()} className="mt-3 text-[#D4FF00] font-bold text-sm">Попробовать снова</button>
          </div>
        )}
 
@@ -751,19 +1052,28 @@ export default function Workouts({ user }: { user: UserProfile }) {
          )}
 
          {plans.length === 0 && !error ? (
-           <div className="text-center p-8 bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded-2xl">
-              <div className="text-neutral-500 text-sm mb-4">Программа еще не сгенерирована.</div>
+           <div className="text-center p-8 bg-white/[0.02] border border-white/[0.06] backdrop-blur-2xl rounded-2xl">
+              <div className="text-neutral-400 text-sm mb-4">Программа еще не сгенерирована.</div>
            </div>
          ) : plans.map((p: any, i: number) => (
-           <div key={p.id || i} className={`p-4 rounded-2xl border transition-all ${p.status === 'completed' ? 'bg-white/[0.03] backdrop-blur-2xl/50 border-neutral-800/50' : p.status === 'next' ? 'bg-[#D4FF00]/5 border-[#D4FF00]/30 shadow-[0_4px_20px_-10px_rgba(212,255,0,0.15)]' : 'bg-white/[0.03] backdrop-blur-2xl border-neutral-800'} flex items-center justify-between`}>
-             <div className="flex items-center gap-4">
-               <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-[#D4FF00]/10 text-[#D4FF00]' : p.status === 'next' ? 'bg-[#D4FF00] text-black' : 'bg-white/[0.06] text-neutral-500'}`}>
+           <div 
+             key={p.id || i} 
+             className={`p-4 rounded-2xl border transition-all ${
+               p.status === 'completed' 
+                 ? 'bg-white/[0.02] border-white/[0.06]' 
+                 : p.status === 'next' 
+                   ? 'bg-neutral-900/90 border-[#D4FF00]/40 shadow-[0_0_24px_rgba(212,255,0,0.08)]' 
+                   : 'bg-white/[0.02] border-white/[0.06]'
+             } flex items-center justify-between`}
+           >
+             <div className="flex items-center gap-3.5">
+               <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${p.status === 'completed' ? 'bg-[#D4FF00]/10 text-[#D4FF00]' : p.status === 'next' ? 'bg-[#D4FF00] text-black font-bold' : 'bg-white/[0.06] text-neutral-400'}`}>
                  {p.status === 'completed' ? <CheckCircle size={20} /> : <Dumbbell size={20} />}
                </div>
                <div>
-                 <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest mb-0.5">Тренировка {i + 1}</div>
+                 <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-0.5">Тренировка {i + 1}</div>
                  <div className={`font-semibold text-sm ${p.status === 'locked' ? 'text-neutral-400' : 'text-white'}`}>{p.title}</div>
-                 {p.status === 'completed' && <div className="text-[10px] text-[#D4FF00] font-medium mt-0.5">Завершена</div>}
+                 {p.status === 'completed' && <div className="text-xs text-[#D4FF00] font-semibold mt-0.5">Завершена</div>}
                </div>
              </div>
              {p.status === 'completed' ? (
@@ -780,10 +1090,10 @@ export default function Workouts({ user }: { user: UserProfile }) {
                <button 
                  type="button"
                  onClick={() => startCnsCheck(p)} 
-                 className="w-10 h-10 rounded-full bg-[#D4FF00]/20 flex items-center justify-center text-[#D4FF00] shrink-0 active:scale-95 transition-transform hover:bg-[#D4FF00]/30"
+                 className="w-10 h-10 rounded-xl bg-[#D4FF00] hover:bg-[#c4ed00] text-black shadow-[0_0_15px_rgba(212,255,0,0.2)] flex items-center justify-center shrink-0 active:scale-95 transition-transform"
                  title="Начать"
                >
-                 <Play size={16} fill="currentColor" className="ml-1" />
+                 <Play size={16} fill="black" className="ml-0.5" />
                </button>
              )}
            </div>

@@ -78,23 +78,58 @@ export const logEvent = (eventName: string, eventParams?: any) => {
     console.log(`[Analytics] ${eventName}`, eventParams || '');
 };
 
-const getInitialUid = () => {
+export const getStableUserId = (): string => {
     try {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg?.initDataUnsafe?.user?.id) return String(tg.initDataUnsafe.user.id);
-    } catch {}
-    return 'dev_athlete_123';
+        // 1. Direct user object from Telegram WebApp
+        if (tg?.initDataUnsafe?.user?.id) {
+            const uid = String(tg.initDataUnsafe.user.id);
+            localStorage.setItem('apex_stable_uid', uid);
+            return uid;
+        }
+        // 2. Parse from raw initData string if initDataUnsafe wasn't ready yet
+        if (tg?.initData && typeof tg.initData === 'string') {
+            const params = new URLSearchParams(tg.initData);
+            const userJson = params.get('user');
+            if (userJson) {
+                const parsed = JSON.parse(userJson);
+                if (parsed?.id) {
+                    const uid = String(parsed.id);
+                    localStorage.setItem('apex_stable_uid', uid);
+                    return uid;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Error reading Telegram user id', e);
+    }
+
+    // 3. Persistent stored UID from previous runs on this device
+    const stored = localStorage.getItem('apex_stable_uid');
+    if (stored) return stored;
+
+    // 4. Check legacy IDs if user had an existing session
+    const legacyDev = localStorage.getItem('apex_profile_dev_athlete_123');
+    if (legacyDev) {
+        localStorage.setItem('apex_stable_uid', 'dev_athlete_123');
+        return 'dev_athlete_123';
+    }
+
+    // 5. Generate stable guest UID for desktop/standalone runs (never resets randomly)
+    const newGuestUid = 'guest_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+    localStorage.setItem('apex_stable_uid', newGuestUid);
+    return newGuestUid;
 };
 
 // Custom auth object to satisfy existing codebase dependencies
 export const auth = {
-    currentUser: { uid: getInitialUid() } as { uid: string } | null
+    currentUser: { uid: getStableUserId() } as { uid: string } | null
 };
 
 // Initialize user using Telegram ID (Bypassing Firebase Auth entirely)
 export const initFirebaseUser = async () => {
     return new Promise((resolve) => {
-        const uid = getInitialUid();
+        const uid = getStableUserId();
         auth.currentUser = { uid };
         resolve(auth.currentUser);
     });
@@ -126,6 +161,14 @@ export const deleteUserProfile = async (userId: string) => {
     try {
         localStorage.removeItem(`apex_profile_${userId}`);
         localStorage.removeItem(`apex_workouts_${userId}`);
+        localStorage.removeItem('apex_profile');
+        localStorage.removeItem('apex_profile_dev_athlete_123');
+        localStorage.removeItem('apex_profile_777000');
+        localStorage.removeItem('apex_active_session');
+        localStorage.removeItem('apex_session_data');
+        localStorage.removeItem('apex_session_start_time');
+        localStorage.removeItem('apex_rest_target_ts');
+        localStorage.removeItem('apex_rest_total');
         const { deleteDoc, getDocs, collection } = await import('firebase/firestore');
         
         // Wipe workouts subcollection first
@@ -211,7 +254,34 @@ export const loadWorkoutLogs = async (userId: string): Promise<any[]> => {
 };
 
 export const loadUserProfile = async (userId: string): Promise<UserProfile | null> => {
-    const cached = localStorage.getItem(`apex_profile_${userId}`);
+    let cached = localStorage.getItem(`apex_profile_${userId}`);
+    
+    // Automatic migration from older dev/guest sessions if current Telegram ID has no profile yet
+    if (!cached) {
+        const fallbackCandidates = [
+            'apex_profile_dev_athlete_123',
+            'apex_profile_777000',
+            'apex_profile'
+        ];
+        for (const candidateKey of fallbackCandidates) {
+            const candidateData = localStorage.getItem(candidateKey);
+            if (candidateData) {
+                cached = candidateData;
+                localStorage.setItem(`apex_profile_${userId}`, candidateData);
+                // Also migrate workouts if available
+                const legacyWorkoutKey = candidateKey.replace('profile', 'workouts');
+                const legacyWorkouts = localStorage.getItem(legacyWorkoutKey);
+                if (legacyWorkouts && !localStorage.getItem(`apex_workouts_${userId}`)) {
+                    localStorage.setItem(`apex_workouts_${userId}`, legacyWorkouts);
+                    localStorage.removeItem(legacyWorkoutKey);
+                }
+                // Clean up legacy key so migration happens exactly once
+                localStorage.removeItem(candidateKey);
+                break;
+            }
+        }
+    }
+
     let localProfile: UserProfile | null = null;
     if (cached) {
         try {
