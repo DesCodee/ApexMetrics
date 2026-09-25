@@ -75,7 +75,7 @@ export default function Home({ user, tgUser, onNavigate }: { user: UserProfile, 
           <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wider mb-1">
             Сводка • Сегодня
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">
+          <h1 className="text-xl font-bold tracking-tight text-white font-sans">
             Доброе утро, {tgUser?.first_name || 'Атлет'}
           </h1>
         </div>
@@ -212,7 +212,7 @@ export default function Home({ user, tgUser, onNavigate }: { user: UserProfile, 
             </div>
             <div>
                <div className="text-white font-bold text-base leading-none mb-2 tabular-nums">
-                  {dailyStats.cnsScore ? `${dailyStats.cnsScore}%` : 'Тест'}
+                  {dailyStats.cnsScore ? `${dailyStats.cnsScore}%` : '--'}
                </div>
                <div className="w-full bg-neutral-900 h-1.5 rounded-xl overflow-hidden">
                   <div 
@@ -223,10 +223,10 @@ export default function Home({ user, tgUser, onNavigate }: { user: UserProfile, 
                      style={{ width: `${dailyStats.cnsScore || 0}%` }} 
                   />
                </div>
-               <div className="text-xs text-neutral-300 mt-1.5 font-medium truncate">
+               <div className="text-xs text-neutral-400 mt-1.5 font-medium truncate">
                   {dailyStats.cnsStatus === 'Optimal' ? 'Готовность' :
                    dailyStats.cnsStatus === 'Moderate' ? 'Умеренно' :
-                   dailyStats.cnsStatus === 'Fatigued' ? 'Истощение' : 'Замерить →'}
+                   dailyStats.cnsStatus === 'Fatigued' ? 'Истощение' : 'Замерить'}
                </div>
             </div>
          </div>

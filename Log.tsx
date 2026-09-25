@@ -92,7 +92,7 @@ export default function Log({ user }: { user: UserProfile }) {
   return (
     <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
        <header className="pt-2">
-         <h1 className="text-xl font-bold tracking-tight text-white">Быстрый лог</h1>
+         <h1 className="text-xl font-bold tracking-tight text-white font-sans">Быстрый лог</h1>
        </header>
 
        {/* Main Actions (Featured Cards) */}
@@ -217,10 +217,11 @@ export default function Log({ user }: { user: UserProfile }) {
           </div>
 
           <button 
+             id="save-daily-stats-btn"
              onClick={handleSaveStats}
              disabled={isSavingStats}
-             className={`w-full font-bold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
-                savedSuccess ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-[#D4FF00] hover:bg-[#c4ed00] text-black shadow-[0_0_20px_rgba(212,255,0,0.2)]'
+             className={`w-full font-extrabold text-sm py-3.5 px-4 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider ${
+                savedSuccess ? 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-[#D4FF00] hover:bg-[#c4ed00] text-black shadow-[0_0_20px_rgba(212,255,0,0.25)]'
              } disabled:opacity-50`}
           >
              {isSavingStats ? (

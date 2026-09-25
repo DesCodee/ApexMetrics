@@ -84,7 +84,7 @@ export default function Body({
   return (
     <div className="p-5 space-y-4 animate-in fade-in duration-300 max-w-md mx-auto pb-24">
        <header className="pt-2">
-         <h1 className="text-xl font-bold tracking-tight text-white">Параметры тела</h1>
+         <h1 className="text-xl font-bold tracking-tight text-white font-sans">Параметры тела</h1>
        </header>
 
        {/* Top Metrics */}
@@ -171,12 +171,12 @@ export default function Body({
             id="body-connect-scale-btn"
             onClick={handleConnectScale}
             disabled={syncStatus === 'syncing'}
-            className="bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-xs font-bold px-6 py-3 rounded-xl uppercase tracking-wider active:scale-95 transition-transform flex items-center gap-2 shadow-[0_0_15px_rgba(212,255,0,0.2)]"
+            className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-sm font-extrabold py-3.5 px-4 rounded-xl uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(212,255,0,0.25)] cursor-pointer"
           >
              {syncStatus === 'syncing' ? (
                'Синхронизация...'
              ) : syncStatus === 'synced' ? (
-               <><Check size={14} /> Подключено</>
+               <><Check size={16} /> Подключено</>
              ) : (
                'Подключить устройство'
              )}
