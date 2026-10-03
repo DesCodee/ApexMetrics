@@ -70,13 +70,19 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
   }
 ]`;
 
-    const response = await ai.models.generateContent({
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Gemini generation timed out (7s)")), 7000)
+    );
+
+    const generatePromise = ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
           responseMimeType: "application/json"
       }
     });
+
+    const response: any = await Promise.race([generatePromise, timeoutPromise]);
 
     let resultText = (response.text || "[]").trim();
     if (resultText.startsWith("```")) {
@@ -85,9 +91,9 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
     const parsed = JSON.parse(resultText);
     const workouts = Array.isArray(parsed) ? parsed : (parsed.workouts || []);
 
-    res.json({ workouts });
-  } catch (error) {
-    // Fallback if API fails (e.g., rate limits, quota exceeded)
+    res.json({ workouts, source: 'ai' });
+  } catch (error: any) {
+    // Fallback if API fails or times out (ensures instant response)
     const fallbackWorkouts = [
       {
         "title": "Фулбади A (База)",
@@ -121,8 +127,8 @@ Respond ONLY with a valid JSON array of workouts, exactly like this format, noth
       }
     ];
     
-    console.log("Using fallback workout plan due to API error");
-    res.json({ workouts: fallbackWorkouts });
+    console.log("Using fallback workout plan due to API error:", error?.message || error);
+    res.json({ workouts: fallbackWorkouts, source: 'fallback' });
   }
 });
 

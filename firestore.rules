@@ -64,6 +64,10 @@ service cloud.firestore {
           && isValidCnsLog(incoming(), userId);
       }
       
+      match /weightLogs/{logId} {
+        allow read, write: if true;
+      }
+      
       match /daily_stats/{dateId} {
         allow read, write: if true;
       }

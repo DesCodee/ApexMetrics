@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ApexEngine, UserProfile, WorkoutLog, CNSReadiness, formatTonnage } from '../appEngine';
-import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info, Plus, Trash2, Timer, X, RotateCcw, Trophy, Sparkles } from 'lucide-react';
+import { Dumbbell, Play, CheckCircle, ChevronLeft, Brain, Activity, Moon, ShieldAlert, Info, Plus, Trash2, Timer, X, RotateCcw, Trophy, Sparkles, History } from 'lucide-react';
 import { loadWorkoutLogs, saveWorkoutLog, auth, logEvent, saveCnsLog } from '../firebase';
 import { tgHaptic } from '../utils/haptics';
 import CnsRecoveryModal from './CnsRecoveryModal';
 
-export default function Workouts({ user }: { user: UserProfile }) {
+export default function Workouts({ user, onOpenHistory }: { user: UserProfile; onOpenHistory?: () => void }) {
   // Resilient draft loader for 0ms lag & no race conditions
   const initialDraft = (() => {
     try {
@@ -497,6 +497,68 @@ export default function Workouts({ user }: { user: UserProfile }) {
     });
   };
 
+  const handleAddExercise = () => {
+    tgHaptic('medium');
+    const nextExIndex = activeSession?.exercises?.length || 0;
+    const newExercise = {
+      name: '',
+      sets: 3,
+      reps: '10',
+      rpe: 8,
+      isCustom: true
+    };
+    const updatedExercises = [...(activeSession?.exercises || []), newExercise];
+    const updatedSession = { ...activeSession, exercises: updatedExercises };
+    setActiveSession(updatedSession);
+
+    setSessionData((prev: any) => {
+      const nextData = {
+        ...prev,
+        [nextExIndex]: [
+          { weight: '', reps: '', rpe: 8, completed: false },
+          { weight: '', reps: '', rpe: 8, completed: false },
+          { weight: '', reps: '', rpe: 8, completed: false }
+        ]
+      };
+      syncWorkoutDraft(updatedSession, nextData, sessionStartTime || Date.now());
+      return nextData;
+    });
+  };
+
+  const updateExerciseName = (exerciseIndex: number, newName: string) => {
+    if (!activeSession?.exercises) return;
+    const updatedExercises = activeSession.exercises.map((ex: any, idx: number) => {
+      if (idx === exerciseIndex) {
+        return { ...ex, name: newName };
+      }
+      return ex;
+    });
+    const updatedSession = { ...activeSession, exercises: updatedExercises };
+    setActiveSession(updatedSession);
+    syncWorkoutDraft(updatedSession, sessionData, sessionStartTime || Date.now());
+  };
+
+  const removeExercise = (exerciseIndex: number) => {
+    tgHaptic('light');
+    if (!activeSession?.exercises) return;
+    const updatedExercises = activeSession.exercises.filter((_: any, idx: number) => idx !== exerciseIndex);
+    const updatedSession = { ...activeSession, exercises: updatedExercises };
+    setActiveSession(updatedSession);
+
+    setSessionData((prev: any) => {
+      const nextData: any = {};
+      let targetIdx = 0;
+      for (let oldIdx = 0; oldIdx < activeSession.exercises.length; oldIdx++) {
+        if (oldIdx !== exerciseIndex) {
+          nextData[targetIdx] = prev[oldIdx] || [];
+          targetIdx++;
+        }
+      }
+      syncWorkoutDraft(updatedSession, nextData, sessionStartTime || Date.now());
+      return nextData;
+    });
+  };
+
   const cancelSessionDraft = () => {
     tgHaptic('warning');
     if (confirm('Отменить текущую тренировку и удалить черновик?')) {
@@ -525,10 +587,10 @@ export default function Workouts({ user }: { user: UserProfile }) {
     
     try {
       const mappedExercises = activeSession.exercises.map((ex: any, i: number) => ({
-          name: ex.name,
+          name: (ex.name && ex.name.trim()) ? ex.name.trim() : `Упражнение ${i + 1}`,
           reps: ex.reps || '10',
           rpe: ex.rpe || 8,
-          sets: sessionData[i].map((s: any) => ({
+          sets: (sessionData[i] || []).map((s: any) => ({
             weight: Number(s.weight) || 0,
             reps: Number(s.reps) || 0,
             rpe: Number(s.rpe) || ex.rpe || 8
@@ -818,12 +880,35 @@ export default function Workouts({ user }: { user: UserProfile }) {
         <div className="space-y-6">
           {activeSession.exercises?.map((ex: any, i: number) => (
             <div key={i} className="bg-white/[0.02] rounded-2xl p-6 space-y-4">
-              <div className="flex justify-between items-baseline">
-                <div className="font-normal text-base text-white">{ex.name}</div>
-                <div className="text-xs text-neutral-400 flex gap-2">
-                   <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)} × {typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
-                   <span>RPE {ex.rpe || 8}</span>
-                </div>
+              <div className="flex justify-between items-center gap-3">
+                {ex.isCustom ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={ex.name || ''} 
+                      onChange={(e) => updateExerciseName(i, e.target.value)}
+                      placeholder="Название упражнения"
+                      className="flex-1 bg-neutral-900 border border-white/[0.08] rounded-xl px-3 py-2 text-white text-base font-normal outline-none focus:border-white/20 transition-colors placeholder:text-neutral-500"
+                      autoFocus={!ex.name}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExercise(i)}
+                      className="p-2.5 rounded-xl bg-white/[0.03] text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                      title="Удалить упражнение"
+                    >
+                      <Trash2 size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-normal text-base text-white">{ex.name}</div>
+                    <div className="text-xs text-neutral-400 flex gap-2">
+                       <span>{typeof ex.sets === 'number' ? ex.sets : (Array.isArray(ex.sets) ? ex.sets.length : 3)} × {typeof ex.reps === 'string' || typeof ex.reps === 'number' ? ex.reps : '10'}</span>
+                       <span>RPE {ex.rpe || 8}</span>
+                    </div>
+                  </>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -951,6 +1036,16 @@ export default function Workouts({ user }: { user: UserProfile }) {
           ))}
         </div>
         
+        {/* Add custom exercise button */}
+        <button 
+          type="button" 
+          onClick={handleAddExercise}
+          className="w-full py-4 px-4 bg-white/[0.02] hover:bg-white/[0.05] border border-dashed border-white/[0.12] hover:border-white/30 rounded-2xl flex items-center justify-center gap-2 text-sm font-normal text-neutral-300 hover:text-white active:scale-[0.99] transition-all"
+        >
+          <Plus size={16} strokeWidth={1.5} className="text-[#D4FF00]" />
+          <span>+ Добавить упражнение</span>
+        </button>
+        
         {/* Primary Action Button */}
         <button 
           onClick={finishSession}
@@ -1019,16 +1114,29 @@ export default function Workouts({ user }: { user: UserProfile }) {
              Smart Engine
            </p>
          </div>
-         <button
-           type="button"
-           onClick={forceRegeneratePlans}
-           disabled={regenerating}
-           className="px-3 py-1.5 rounded-xl bg-white/[0.04] text-xs font-normal text-neutral-400 hover:text-white flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-           title="Перегенерировать программу тренировок через ИИ"
-         >
-           <Sparkles size={13} strokeWidth={1.5} className={regenerating ? "animate-spin" : ""} />
-           <span>{regenerating ? "Генерация..." : "Обновить AI"}</span>
-         </button>
+         <div className="flex items-center gap-2">
+           {onOpenHistory && (
+             <button
+               type="button"
+               onClick={onOpenHistory}
+               className="px-3 py-1.5 rounded-xl bg-white/[0.04] text-xs font-normal text-neutral-300 hover:text-white flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+               title="История завершённых тренировок"
+             >
+               <History size={13} strokeWidth={1.5} className="text-[#D4FF00]" />
+               <span>История</span>
+             </button>
+           )}
+           <button
+             type="button"
+             onClick={forceRegeneratePlans}
+             disabled={regenerating}
+             className="px-3 py-1.5 rounded-xl bg-white/[0.04] text-xs font-normal text-neutral-400 hover:text-white flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+             title="Перегенерировать программу тренировок через ИИ"
+           >
+             <Sparkles size={13} strokeWidth={1.5} className={regenerating ? "animate-spin" : ""} />
+             <span>{regenerating ? "Генерация..." : "Обновить AI"}</span>
+           </button>
+         </div>
        </header>
 
        {error && (

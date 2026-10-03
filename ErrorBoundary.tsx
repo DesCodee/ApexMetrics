@@ -80,39 +80,39 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-4 text-amber-400 text-3xl">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-4 text-amber-400 text-2xl">
             ⚡
           </div>
 
-          <h1 className="text-xl font-bold mb-2">Произошел сбой экрана</h1>
+          <h1 className="text-xl font-light tracking-tight text-white mb-2 font-sans">Произошел сбой экрана</h1>
           
-          <p className="text-xs text-neutral-400 max-w-xs mb-4 leading-relaxed">
+          <p className="text-xs text-neutral-400 max-w-xs mb-6 leading-relaxed font-normal">
             {hasActiveWorkout
               ? 'Прогресс твоей текущей тренировки сохранён в защищённом хранилище.'
               : 'Приложение столкнулось с непредвиденной ошибкой.'}
           </p>
 
-          <div className="w-full max-w-xs space-y-2 mb-6">
+          <div className="w-full max-w-xs space-y-2.5 mb-6">
             <button
               onClick={this.handleReloadAndContinue}
-              className="w-full bg-[#D4FF00] hover:bg-[#bce300] text-black font-bold py-3.5 px-4 rounded-xl text-sm shadow-[0_0_20px_rgba(212,255,0,0.25)] active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black font-medium py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer shadow-none"
             >
               Перезагрузить и продолжить
             </button>
 
             <button
               onClick={this.handleResetCache}
-              className="w-full bg-white/[0.05] hover:bg-white/[0.1] text-neutral-400 hover:text-white font-medium py-2.5 px-4 rounded-xl text-xs active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-white font-normal py-3 px-4 rounded-xl text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer"
             >
               Сбросить кэш сессии
             </button>
           </div>
 
           <details className="w-full max-w-sm text-left">
-            <summary className="text-xs text-neutral-400 hover:text-white cursor-pointer font-mono mb-2">
+            <summary className="text-xs text-neutral-500 hover:text-neutral-300 cursor-pointer mb-2 font-normal">
               Технические подробности
             </summary>
-            <pre className="bg-neutral-950 border border-neutral-800 p-3 rounded-xl text-xs text-neutral-300 overflow-auto max-h-36">
+            <pre className="bg-white/[0.02] p-3 rounded-xl text-xs text-neutral-400 overflow-auto max-h-36 font-mono">
               {this.state.error?.message}
               {'\n'}
               {this.state.error?.stack}

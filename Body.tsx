@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserProfile } from '../appEngine';
-import { Lock, Crown, Bluetooth, Check, CheckCircle2, Edit3, X, Save, Flame, Dumbbell, Shield, Activity } from 'lucide-react';
+import { Lock, Crown, Bluetooth, Clock, CheckCircle2, Edit3, X, Save, Flame, Dumbbell, Shield, Activity } from 'lucide-react';
 import { tgHaptic } from '../utils/haptics';
-import { saveUserProfile, auth } from '../firebase';
+import { saveUserProfile, auth, saveWeightLog, loadWeightLogs, WeightLog } from '../firebase';
+import WeightChart from '../components/WeightChart';
 
 export default function Body({ 
   user, 
@@ -13,10 +14,46 @@ export default function Body({
   onNavigate?: (tab: string) => void,
   onUpdateUser?: (u: UserProfile) => void 
 }) {
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const [isEditingWeight, setIsEditingWeight] = useState(false);
   const [weightInput, setWeightInput] = useState(user.weight ? String(user.weight) : '75');
   const [isSavingWeight, setIsSavingWeight] = useState(false);
+  const [weightHistory, setWeightHistory] = useState<WeightLog[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHistory = async () => {
+      if (auth.currentUser) {
+        try {
+          const list = await loadWeightLogs(auth.currentUser.uid);
+          if (isMounted) {
+            if (list.length === 0 && user.weight) {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const initLog: WeightLog = {
+                id: 'w_' + todayStr,
+                weight: user.weight,
+                date: todayStr,
+                timestamp: Date.now()
+              };
+              setWeightHistory([initLog]);
+              saveWeightLog(auth.currentUser.uid, user.weight, todayStr);
+            } else {
+              setWeightHistory(list);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load weight logs', e);
+        }
+      } else if (user.weight) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        setWeightHistory([{ id: 'init', weight: user.weight, date: todayStr, timestamp: Date.now() }]);
+      }
+    };
+
+    fetchHistory();
+    return () => {
+      isMounted = false;
+    };
+  }, [user.weight]);
 
   // Compute basic metrics based on user
   const weight = user.weight;
@@ -42,16 +79,6 @@ export default function Body({
 
   const bmiStatus = getBmiBadge(bmiNum);
 
-  const handleConnectScale = () => {
-    tgHaptic('medium');
-    setSyncStatus('syncing');
-    setTimeout(() => {
-      tgHaptic('success');
-      setSyncStatus('synced');
-      setTimeout(() => setSyncStatus('idle'), 4000);
-    }, 1200);
-  };
-
   const handleSaveWeight = async () => {
     const num = parseFloat(weightInput.replace(',', '.'));
     if (isNaN(num) || num < 30 || num > 300) {
@@ -67,10 +94,17 @@ export default function Body({
     };
 
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
       if (auth.currentUser) {
         await saveUserProfile(updatedUser, auth.currentUser.uid);
+        await saveWeightLog(auth.currentUser.uid, updatedUser.weight, todayStr);
       }
       onUpdateUser?.(updatedUser);
+      setWeightHistory(prev => {
+        const filtered = prev.filter(p => p.date !== todayStr);
+        const nextList = [...filtered, { id: 'w_' + todayStr, date: todayStr, weight: updatedUser.weight, timestamp: Date.now() }];
+        return nextList.sort((a, b) => a.date.localeCompare(b.date));
+      });
       setIsEditingWeight(false);
       tgHaptic('success');
     } catch (e) {
@@ -158,28 +192,31 @@ export default function Body({
           </div>
        </div>
 
-       {/* Smart Scale Sync CTA */}
+       {/* Weight Progress Line Chart */}
+       <WeightChart history={weightHistory} currentWeight={weight} />
+
+       {/* Smart Scale Sync Info */}
        <div className="bg-white/[0.02] rounded-2xl p-6 flex flex-col items-center text-center">
-          <Bluetooth size={22} strokeWidth={1.5} className="text-neutral-400 mb-3" />
-          <h3 className="text-white font-normal text-sm mb-1">Синхронизация с весами</h3>
-          <p className="text-xs text-neutral-400 mb-6 px-2 leading-relaxed font-normal">
-            {syncStatus === 'synced' 
-              ? 'Устройство синхронизировано (Apple Health / Garmin). Данные обновлены!' 
-              : 'Подключите умные весы (Garmin, Xiaomi, Apple Health) для автоматического расчета состава тела.'}
+          <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-neutral-400 mb-3">
+             <Bluetooth size={20} strokeWidth={1.5} />
+          </div>
+          <div className="flex items-center gap-2 mb-1">
+             <h3 className="text-white font-normal text-sm">Синхронизация с весами</h3>
+             <span className="text-[10px] font-normal text-neutral-400 bg-white/[0.04] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Скоро
+             </span>
+          </div>
+          <p className="text-xs text-neutral-400 mb-5 px-2 leading-relaxed font-normal">
+             Прямая интеграция с умными весами и сервисами (Apple Health, Garmin, Xiaomi) находится в разработке.
           </p>
           <button 
             id="body-connect-scale-btn"
-            onClick={handleConnectScale}
-            disabled={syncStatus === 'syncing'}
-            className="w-full bg-[#D4FF00] hover:bg-[#c4ed00] text-black text-sm font-medium py-3.5 px-4 rounded-xl uppercase tracking-wider active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-none"
+            type="button"
+            disabled
+            className="w-full bg-white/[0.04] text-neutral-500 text-xs font-normal py-3.5 px-4 rounded-xl uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed select-none"
           >
-             {syncStatus === 'syncing' ? (
-               'Синхронизация...'
-             ) : syncStatus === 'synced' ? (
-               <><Check size={16} strokeWidth={1.5} /> Подключено</>
-             ) : (
-               'Подключить устройство'
-             )}
+             <Clock size={14} strokeWidth={1.5} />
+             В разработке
           </button>
        </div>
 

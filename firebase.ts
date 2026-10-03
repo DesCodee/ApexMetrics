@@ -424,4 +424,89 @@ export const loadCnsLogs = async (userId: string): Promise<any[]> => {
     }
 };
 
+export interface WeightLog {
+    id: string;
+    weight: number;
+    date: string; // YYYY-MM-DD
+    timestamp: number;
+}
+
+export const saveWeightLog = async (userId: string, weight: number, dateStr?: string) => {
+    const date = dateStr || new Date().toISOString().split('T')[0];
+    const logId = `w_${date}`;
+    const entry: WeightLog = {
+        id: logId,
+        weight: Math.round(weight * 10) / 10,
+        date,
+        timestamp: Date.now()
+    };
+
+    const cacheKey = `apex_weight_logs_${userId}`;
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        const list: WeightLog[] = cached ? JSON.parse(cached) : [];
+        const filtered = list.filter(item => item.date !== date);
+        filtered.push(entry);
+        filtered.sort((a, b) => a.date.localeCompare(b.date));
+        localStorage.setItem(cacheKey, JSON.stringify(filtered));
+    } catch (err) {
+        console.warn('Local weight cache error', err);
+    }
+
+    try {
+        const logRef = doc(db, 'users', userId, 'weightLogs', logId);
+        await setDoc(logRef, {
+            ...entry,
+            userId,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `users/${userId}/weightLogs/${logId}`);
+    }
+};
+
+export const loadWeightLogs = async (userId: string): Promise<WeightLog[]> => {
+    const cacheKey = `apex_weight_logs_${userId}`;
+    let cachedList: WeightLog[] = [];
+    try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            cachedList = JSON.parse(cached);
+        }
+    } catch {}
+
+    const fetchRemote = async (): Promise<WeightLog[]> => {
+        try {
+            const logsRef = collection(db, 'users', userId, 'weightLogs');
+            const q = query(logsRef, orderBy('date', 'asc'), limit(60));
+            const snap = await withTimeout(getDocs(q), 2500);
+            const items: WeightLog[] = snap.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    weight: Number(data.weight) || 0,
+                    date: data.date || '',
+                    timestamp: data.timestamp || 0
+                };
+            });
+            if (items.length > 0) {
+                items.sort((a, b) => a.date.localeCompare(b.date));
+                localStorage.setItem(cacheKey, JSON.stringify(items));
+                return items;
+            }
+        } catch (e) {
+            handleFirestoreError(e, OperationType.LIST, `users/${userId}/weightLogs`);
+        }
+        return cachedList;
+    };
+
+    if (cachedList.length > 0) {
+        fetchRemote();
+        return cachedList;
+    }
+
+    return await fetchRemote();
+};
+
+
 
